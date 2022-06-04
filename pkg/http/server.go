@@ -5,8 +5,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -44,27 +42,22 @@ func NewServer() *Server {
 	return s
 }
 
-func (s *Server) Run(port string) {
+func (s *Server) Run(port string) error {
 	s.Server.Addr = port
+
+	err := s.Server.ListenAndServe()
+	if err != nil {
+		return err
+	}
+
 	s.Logger.Println("[INFO] Server listening on", port)
+	return nil
+}
 
-	go func() {
-		err := s.Server.ListenAndServe()
-		if err != nil {
-			s.Logger.Fatalf("[ERROR]", err)
-		}
-	}()
-
-	// graceful shutdown
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt)
-	signal.Notify(sigChan, syscall.SIGTERM)
-	sig := <-sigChan
-	s.Logger.Println("[INFO] Received terminate, graceful shutdown", sig)
-
-	tc, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+func (s *Server) Close() error {
+	tc, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	s.Server.Shutdown(tc)
+	return s.Server.Shutdown(tc)
 }
 
 func (s *Server) RegisterRoutes() {
