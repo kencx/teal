@@ -8,8 +8,8 @@ import (
 	"github.com/kencx/teal/pkg"
 )
 
-func (db *DB) GetBook(id int) (*pkg.Book, error) {
-	tx, err := db.db.Begin()
+func (r *Repository) GetBook(id int) (*pkg.Book, error) {
+	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, err
 	}
@@ -34,8 +34,8 @@ func (db *DB) GetBook(id int) (*pkg.Book, error) {
 	return &b, nil
 }
 
-func (db *DB) GetBookByTitle(title string) (*pkg.Book, error) {
-	tx, err := db.db.Begin()
+func (r *Repository) GetBookByTitle(title string) (*pkg.Book, error) {
+	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, err
 	}
@@ -60,8 +60,8 @@ func (db *DB) GetBookByTitle(title string) (*pkg.Book, error) {
 	return &b, nil
 }
 
-func (db *DB) GetAllBooks() ([]*pkg.Book, error) {
-	tx, err := db.db.Begin()
+func (r *Repository) GetAllBooks() ([]*pkg.Book, error) {
+	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +89,8 @@ func (db *DB) GetAllBooks() ([]*pkg.Book, error) {
 	return books, nil
 }
 
-func (db *DB) CreateBook(b *pkg.Book) (int, error) {
-	tx, err := db.db.Begin()
+func (r *Repository) CreateBook(b *pkg.Book) (int, error) {
+	tx, err := r.db.Begin()
 	if err != nil {
 		return -1, err
 	}
@@ -110,23 +110,32 @@ func (db *DB) CreateBook(b *pkg.Book) (int, error) {
 	return int(lastId), nil
 }
 
-func (db *DB) UpdateBook(id int, b *pkg.Book) error {
-	tx, err := db.db.Begin()
+func (r *Repository) UpdateBook(id int, b *pkg.Book) error {
+	tx, err := r.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer endTx(tx, err)
 
-	_, err = tx.Exec("UPDATE books SET title=$1, author=$2, isbn=$3 WHERE id=$4", b.Title, b.Author, b.ISBN, id)
+	result, err := tx.Exec("UPDATE books SET title=$1, author=$2, isbn=$3 WHERE id=$4", b.Title, b.Author, b.ISBN, id)
 	if err != nil {
 		return fmt.Errorf("db: unable to update book %d: %w", id, err)
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("db: unable to update book %d: %w", id, err)
+	}
+
+	if count == 0 {
+		return errors.New("db: no books updated")
 	}
 
 	return nil
 }
 
-func (db *DB) DeleteBook(id int) error {
-	tx, err := db.db.Begin()
+func (r *Repository) DeleteBook(id int) error {
+	tx, err := r.db.Begin()
 	if err != nil {
 		return err
 	}

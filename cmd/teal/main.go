@@ -25,13 +25,13 @@ func main() {
 }
 
 type App struct {
-	DB         *storage.DB
+	DB         *storage.Repository
 	HTTPServer *http.Server
 }
 
 func NewApp() *App {
 	return &App{
-		DB:         storage.NewDB("sqlite3"),
+		DB:         storage.NewRepository("sqlite3"),
 		HTTPServer: http.NewServer(),
 	}
 }
@@ -41,8 +41,8 @@ func (a *App) Run(port string) error {
 	a.DB.Open("./test.db")
 	a.HTTPServer.Logger.Println("[INFO] Database connection successfully established!")
 
-	a.HTTPServer.BS = a.DB
-	a.HTTPServer.AS = a.DB
+	a.HTTPServer.Books = a.DB
+	// a.HTTPServer.Authors = a.DB
 
 	if err := a.HTTPServer.Run(port); err != nil {
 		return err

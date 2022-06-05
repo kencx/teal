@@ -7,8 +7,8 @@ import (
 	"github.com/kencx/teal/pkg"
 )
 
-func setup(t *testing.T) *DB {
-	db := NewDB("sqlite3")
+func setup(t *testing.T) *Repository {
+	db := NewRepository("sqlite3")
 	if err := db.Open("./test.db"); err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +27,6 @@ func setup(t *testing.T) *DB {
 func TestGetBook(t *testing.T) {
 	db := setup(t)
 
-	// populate db
 	expected := &pkg.Book{
 		Title:  "FooBar",
 		Author: "John Doe",
@@ -47,15 +46,8 @@ func TestGetBook(t *testing.T) {
 func TestGetBookNotExists(t *testing.T) {
 	db := setup(t)
 
-	expected := &pkg.Book{
-		Title:  "FooBar",
-		Author: "John Doe",
-		ISBN:   "12345",
-	}
-	_, err := db.CreateBook(expected)
-	checkErr(t, err)
-
 	res, err := db.GetBook(2)
+	checkErr(t, err)
 	if res != nil {
 		t.Fatalf("got %v, want nil", res)
 	}
@@ -81,16 +73,26 @@ func TestGetBookByTitle(t *testing.T) {
 	}
 }
 
+func TestGetBookByTitleNotExists(t *testing.T) {
+	db := setup(t)
+
+	res, err := db.GetBookByTitle("FooBar")
+	checkErr(t, err)
+	if res != nil {
+		t.Fatalf("got %v, want nil", res)
+	}
+}
+
 func TestGetAllBooks(t *testing.T) {
 	db := setup(t)
 
 	expected := []*pkg.Book{
-		&pkg.Book{
+		{
 			Title:  "FooBar",
 			Author: "John Doe",
 			ISBN:   "12345",
 		},
-		&pkg.Book{
+		{
 			Title:  "BarBaz",
 			Author: "Ben Adams",
 			ISBN:   "54678",
@@ -136,6 +138,37 @@ func TestCreateBook(t *testing.T) {
 	}
 }
 
+func TestCreateMultipleBooks(t *testing.T) {
+	db := setup(t)
+
+	expected := []*pkg.Book{
+		{
+			Title:  "FooBar",
+			Author: "John Doe",
+			ISBN:   "12345",
+		},
+		{
+			Title:  "BarBaz",
+			Author: "Ben Adams",
+			ISBN:   "4567",
+		},
+	}
+	for _, b := range expected {
+		_, err := db.CreateBook(b)
+		checkErr(t, err)
+	}
+
+	books, err := db.GetAllBooks()
+	checkErr(t, err)
+
+	if len(books) != len(expected) {
+		t.Errorf("got %v, want %v", len(books), len(expected))
+	}
+	if !reflect.DeepEqual(books, expected) {
+		t.Errorf("got %v, want %v", books, expected)
+	}
+}
+
 func TestCreateNotUniqueBook(t *testing.T) {
 	db := setup(t)
 
@@ -148,6 +181,9 @@ func TestCreateNotUniqueBook(t *testing.T) {
 	checkErr(t, err)
 
 	_, err = db.CreateBook(expected)
+	if err == nil {
+		t.Errorf("expected error")
+	}
 }
 
 func TestUpdateBook(t *testing.T) {
@@ -184,6 +220,20 @@ func TestUpdateBook(t *testing.T) {
 	}
 }
 
+func TestUpdateBookNotExists(t *testing.T) {
+	db := setup(t)
+
+	b := &pkg.Book{
+		Title:  "BarBaz",
+		Author: "Ben Adams",
+		ISBN:   "1022",
+	}
+	err := db.UpdateBook(10, b)
+	if err == nil {
+		t.Fatalf("expected error: book not exists")
+	}
+}
+
 func TestDeleteBook(t *testing.T) {
 	db := setup(t)
 
@@ -199,8 +249,18 @@ func TestDeleteBook(t *testing.T) {
 	checkErr(t, err)
 
 	res, err := db.GetBook(id)
+	checkErr(t, err)
 	if res != nil {
 		t.Fatalf("got %v, want nil", res)
+	}
+}
+
+func TestDeleteBookNotExists(t *testing.T) {
+	db := setup(t)
+
+	err := db.DeleteBook(10)
+	if err == nil {
+		t.Fatalf("expected error: book not exists")
 	}
 }
 

@@ -7,10 +7,10 @@ import (
 	"github.com/kencx/teal/pkg"
 )
 
-func (db *DB) GetAuthor(id int) (*pkg.Author, error) {
+func (r *Repository) GetAuthor(id int) (*pkg.Author, error) {
 	var a pkg.Author
 
-	stmt, err := db.db.Prepare("SELECT id, name FROM book WHERE id = ?")
+	stmt, err := r.db.Prepare("SELECT id, name FROM book WHERE id = ?")
 	if err != nil {
 		return nil, fmt.Errorf("prepare stmt failed: %w", err)
 	}
@@ -26,18 +26,18 @@ func (db *DB) GetAuthor(id int) (*pkg.Author, error) {
 	return &a, nil
 }
 
-func (db *DB) GetAllAuthors() ([]*pkg.Author, error) {
+func (r *Repository) GetAllAuthors() ([]*pkg.Author, error) {
 
 	return nil, nil
 }
 
-func (db *DB) CreateAuthor(a *pkg.Author) (int, error) {
+func (r *Repository) CreateAuthor(a *pkg.Author) (int, error) {
 	return 0, nil
 }
 
-func (db *DB) UpdateAuthor(id int) error {
+func (r *Repository) UpdateAuthor(id int) error {
 	return nil
 }
-func (db *DB) DeleteAuthor(id int) error {
+func (r *Repository) DeleteAuthor(id int) error {
 	return nil
 }

@@ -14,15 +14,34 @@ import (
 var (
 	idleTimeout      = 120 * time.Second
 	readWriteTimeout = 1 * time.Second
+	closeTimeout     = 5 * time.Second
 )
+
+type BookService interface {
+	GetBook(id int) (*pkg.Book, error)
+	GetBookByTitle(title string) (*pkg.Book, error)
+	GetAllBooks() ([]*pkg.Book, error)
+	CreateBook(b *pkg.Book) (int, error)
+	DeleteBook(id int) error
+	UpdateBook(id int, b *pkg.Book) error
+}
+
+type AuthorService interface {
+	GetAuthor(id int) (*pkg.Author, error)
+	GetAuthorByTitle(title string) (*pkg.Author, error)
+	GetAllAuthors() ([]*pkg.Author, error)
+	CreateAuthor(b *pkg.Author) (int, error)
+	DeleteAuthor(id int) error
+	UpdateAuthor(id int, b *pkg.Author) error
+}
 
 type Server struct {
 	Server *http.Server
 	Router *mux.Router
 	Logger *log.Logger
 
-	BS pkg.BookService
-	AS pkg.AuthorService
+	Books   BookService
+	Authors AuthorService
 }
 
 func NewServer() *Server {
@@ -55,7 +74,7 @@ func (s *Server) Run(port string) error {
 }
 
 func (s *Server) Close() error {
-	tc, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	tc, cancel := context.WithTimeout(context.Background(), closeTimeout)
 	defer cancel()
 	return s.Server.Shutdown(tc)
 }

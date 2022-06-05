@@ -14,7 +14,7 @@ import (
 type KeyBook struct{}
 
 func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
-	b, err := s.BS.GetAllBooks()
+	b, err := s.Books.GetAllBooks()
 	if err != nil {
 		s.Logger.Printf("[ERROR] %v", err)
 		http.Error(rw, err.Error(), http.StatusBadRequest)
@@ -37,7 +37,7 @@ func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
 func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 	id := HandleId(rw, r)
 
-	b, err := s.BS.GetBook(id)
+	b, err := s.Books.GetBook(id)
 	if err != nil {
 		s.Logger.Printf("[ERROR] %v", err)
 		http.Error(rw, err.Error(), http.StatusBadRequest)
@@ -56,7 +56,7 @@ func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 
 func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 	book := r.Context().Value(KeyBook{}).(pkg.Book)
-	id, err := s.BS.CreateBook(&book)
+	id, err := s.Books.CreateBook(&book)
 	if err != nil {
 		s.Logger.Printf("[ERROR] %v", err)
 		http.Error(rw, err.Error(), http.StatusBadRequest)
@@ -71,7 +71,7 @@ func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
 	id := HandleId(rw, r)
 	book := r.Context().Value(KeyBook{}).(pkg.Book)
 
-	err := s.BS.UpdateBook(id, &book)
+	err := s.Books.UpdateBook(id, &book)
 	if err == pkg.ErrBookNotFound {
 		http.Error(rw, "Book not found", http.StatusNotFound)
 		return
@@ -86,7 +86,7 @@ func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
 func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
 	id := HandleId(rw, r)
 
-	err := s.BS.DeleteBook(id)
+	err := s.Books.DeleteBook(id)
 	if err == pkg.ErrBookNotFound {
 		http.Error(rw, "Book not found", http.StatusNotFound)
 		return
@@ -101,6 +101,10 @@ func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
 func HandleId(rw http.ResponseWriter, r *http.Request) int {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
+	// TODO FIX!!
+	if id == 0 {
+		return 0
+	}
 	if err != nil {
 		http.Error(rw, "Unable to convert id", http.StatusBadRequest)
 		return -1

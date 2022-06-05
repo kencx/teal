@@ -22,17 +22,8 @@ type Book struct {
 	DateCompleted string `json:"-"`
 }
 
-// func (b Book) String() string {
-// 	return fmt.Sprintf("Book %s by author %s with ISBN %s", b.Title, b.Author, b.ISBN)
-// }
-
-type BookService interface {
-	GetBook(id int) (*Book, error)
-	GetBookByTitle(title string) (*Book, error)
-	GetAllBooks() ([]*Book, error)
-	CreateBook(b *Book) (int, error)
-	UpdateBook(id int, b *Book) error
-	DeleteBook(id int) error
+func (b Book) String() string {
+	return fmt.Sprintf("id=%d title=%s author=%s isbn=%s", b.ID, b.Title, b.Author, b.ISBN)
 }
 
 var ErrBookNotFound = fmt.Errorf("Book not found")
