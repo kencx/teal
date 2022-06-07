@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/kencx/teal/pkg"
 )
 
 var (
@@ -17,28 +16,11 @@ var (
 	closeTimeout     = 5 * time.Second
 )
 
-type BookService interface {
-	GetBook(id int) (*pkg.Book, error)
-	GetBookByTitle(title string) (*pkg.Book, error)
-	GetAllBooks() ([]*pkg.Book, error)
-	CreateBook(b *pkg.Book) (int, error)
-	DeleteBook(id int) error
-	UpdateBook(id int, b *pkg.Book) error
-}
-
-type AuthorService interface {
-	GetAuthor(id int) (*pkg.Author, error)
-	GetAuthorByTitle(title string) (*pkg.Author, error)
-	GetAllAuthors() ([]*pkg.Author, error)
-	CreateAuthor(b *pkg.Author) (int, error)
-	DeleteAuthor(id int) error
-	UpdateAuthor(id int, b *pkg.Author) error
-}
-
 type Server struct {
-	Server *http.Server
-	Router *mux.Router
-	Logger *log.Logger
+	Server  *http.Server
+	Router  *mux.Router
+	InfoLog *log.Logger
+	ErrLog  *log.Logger
 
 	Books   BookService
 	Authors AuthorService
@@ -46,18 +28,20 @@ type Server struct {
 
 func NewServer() *Server {
 	s := &Server{
-		Server: &http.Server{
-			IdleTimeout:  idleTimeout,
-			ReadTimeout:  readWriteTimeout,
-			WriteTimeout: readWriteTimeout,
-		},
-		Router: mux.NewRouter(),
-		Logger: log.New(os.Stdout, "", log.LstdFlags),
+		Router:  mux.NewRouter(),
+		InfoLog: log.New(os.Stdout, "INFO ", log.LstdFlags),
+		ErrLog:  log.New(os.Stdout, "ERROR ", log.LstdFlags),
 	}
 
-	s.Server.Handler = s.Router
-	s.RegisterRoutes()
+	s.Server = &http.Server{
+		Handler:      s.Router,
+		ErrorLog:     s.ErrLog,
+		IdleTimeout:  idleTimeout,
+		ReadTimeout:  readWriteTimeout,
+		WriteTimeout: readWriteTimeout,
+	}
 
+	s.RegisterRoutes()
 	return s
 }
 
@@ -69,7 +53,7 @@ func (s *Server) Run(port string) error {
 		return err
 	}
 
-	s.Logger.Println("[INFO] Server listening on", port)
+	s.InfoLog.Println("Server listening on", port)
 	return nil
 }
 
@@ -93,10 +77,10 @@ func (s *Server) RegisterRoutes() {
 	postRouter.Use(s.MiddlewareBookValidation)
 
 	putRouter := s.Router.Methods(http.MethodPut).Subrouter()
-	putRouter.HandleFunc("/{id:[0-9]+}", s.UpdateBook)
+	// putRouter.HandleFunc("/{id:[0-9]+}", s.UpdateBook)
 	putRouter.Use(s.MiddlewareBookValidation)
 
 	deleteRouter := s.Router.Methods(http.MethodDelete).Subrouter()
 	deleteRouter.HandleFunc("/{id:[0-9]+}", s.DeleteBook)
-	putRouter.Use(s.MiddlewareBookValidation)
+	deleteRouter.Use(s.MiddlewareBookValidation)
 }

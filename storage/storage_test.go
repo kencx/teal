@@ -8,7 +8,7 @@ import (
 func TestOpen(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
-		db := NewRepository("sqlite3")
+		db := NewStore("sqlite3")
 		if err := db.Open("./test.db"); err != nil {
 			t.Error(err)
 		}
@@ -16,14 +16,14 @@ func TestOpen(t *testing.T) {
 	})
 
 	t.Run("no driver", func(t *testing.T) {
-		db := NewRepository("")
+		db := NewStore("")
 		if err := db.Open("./test.db"); err == nil {
 			t.Error("expected error: driver required")
 		}
 	})
 
 	t.Run("no DSN", func(t *testing.T) {
-		db := NewRepository("sqlite3")
+		db := NewStore("sqlite3")
 		if err := db.Open(""); err == nil {
 			t.Error("expected error: connection string required")
 		}

@@ -8,13 +8,13 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/kencx/teal/pkg"
+	"github.com/kencx/teal"
 )
 
 type KeyBook struct{}
 
 func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
-	b, err := s.Books.GetAllBooks()
+	b, err := s.Books.GetAll()
 	if err != nil {
 		s.Logger.Printf("[ERROR] %v", err)
 		http.Error(rw, err.Error(), http.StatusBadRequest)
@@ -37,7 +37,7 @@ func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
 func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 	id := HandleId(rw, r)
 
-	b, err := s.Books.GetBook(id)
+	b, err := s.Books.Get(id)
 	if err != nil {
 		s.Logger.Printf("[ERROR] %v", err)
 		http.Error(rw, err.Error(), http.StatusBadRequest)
@@ -55,8 +55,8 @@ func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
-	book := r.Context().Value(KeyBook{}).(pkg.Book)
-	id, err := s.Books.CreateBook(&book)
+	book := r.Context().Value(KeyBook{}).(teal.Book)
+	id, err := s.Books.Create(&book)
 	if err != nil {
 		s.Logger.Printf("[ERROR] %v", err)
 		http.Error(rw, err.Error(), http.StatusBadRequest)
@@ -67,27 +67,27 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(rw, "Book %d created", id)
 }
 
-func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
-	id := HandleId(rw, r)
-	book := r.Context().Value(KeyBook{}).(pkg.Book)
-
-	err := s.Books.UpdateBook(id, &book)
-	if err == pkg.ErrBookNotFound {
-		http.Error(rw, "Book not found", http.StatusNotFound)
-		return
-	}
-	if err != nil {
-		http.Error(rw, "Book not found", http.StatusInternalServerError)
-		return
-	}
-	s.Logger.Println("Handle PUT Book", id)
-}
+// func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
+// 	id := HandleId(rw, r)
+// 	book := r.Context().Value(KeyBook{}).(teal.Book)
+//
+// 	err := s.Books.Update(id, &book)
+// 	if err == teal.ErrBookNotFound {
+// 		http.Error(rw, "Book not found", http.StatusNotFound)
+// 		return
+// 	}
+// 	if err != nil {
+// 		http.Error(rw, "Book not found", http.StatusInternalServerError)
+// 		return
+// 	}
+// 	s.Logger.Println("Handle PUT Book", id)
+// }
 
 func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
 	id := HandleId(rw, r)
 
-	err := s.Books.DeleteBook(id)
-	if err == pkg.ErrBookNotFound {
+	err := s.Books.Delete(id)
+	if err == teal.ErrBookNotFound {
 		http.Error(rw, "Book not found", http.StatusNotFound)
 		return
 	}
@@ -114,7 +114,7 @@ func HandleId(rw http.ResponseWriter, r *http.Request) int {
 
 func (s Server) MiddlewareBookValidation(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		book := pkg.Book{}
+		book := teal.Book{}
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {

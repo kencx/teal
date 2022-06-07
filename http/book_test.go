@@ -6,52 +6,52 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/kencx/teal/pkg"
+	"github.com/kencx/teal"
 )
 
 type mockBookService struct {
-	getAllBooksFn    func() ([]*pkg.Book, error)
-	getBookFn        func(id int) (*pkg.Book, error)
-	getBookByTitleFn func(title string) (*pkg.Book, error)
-	createBookFn     func(b *pkg.Book) (int, error)
-	updateBookFn     func(id int, b *pkg.Book) error
+	getAllBooksFn    func() ([]*teal.Book, error)
+	getBookFn        func(id int) (*teal.Book, error)
+	getBookByTitleFn func(title string) (*teal.Book, error)
+	createBookFn     func(b *teal.Book) (int, error)
+	updateBookFn     func(id int, b *teal.Book) error
 	deleteBookFn     func(id int) error
 }
 
-func (m *mockBookService) GetAllBooks() ([]*pkg.Book, error) {
+func (m *mockBookService) GetAll() ([]*teal.Book, error) {
 	return m.getAllBooksFn()
 }
 
-func (m *mockBookService) GetBook(id int) (*pkg.Book, error) {
+func (m *mockBookService) Get(id int) (*teal.Book, error) {
 	return m.getBookFn(id)
 }
 
-func (m *mockBookService) GetBookByTitle(title string) (*pkg.Book, error) {
+func (m *mockBookService) GetByTitle(title string) (*teal.Book, error) {
 	return m.getBookByTitleFn(title)
 }
 
-func (m *mockBookService) CreateBook(b *pkg.Book) (int, error) {
+func (m *mockBookService) Create(b *teal.Book) (int, error) {
 	return m.createBookFn(b)
 }
 
-func (m *mockBookService) UpdateBook(id int, b *pkg.Book) error {
+func (m *mockBookService) Update(id int, b *teal.Book) error {
 	return m.updateBookFn(id, b)
 }
 
-func (m *mockBookService) DeleteBook(id int) error {
+func (m *mockBookService) Delete(id int) error {
 	return m.deleteBookFn(id)
 }
 
 func TestGetAllBooks(t *testing.T) {
-	expected := []*pkg.Book{{Title: "FooBar", Author: "John Doe", ISBN: "52634"}}
-	s := Server{books: &mockBookService{
-		getAllBooksFn: func() ([]*pkg.Book, error) {
+	expected := []*teal.Book{{Title: "FooBar", Author: "John Doe", ISBN: "52634"}}
+	s := Server{Books: &mockBookService{
+		getAllBooksFn: func() ([]*teal.Book, error) {
 			return expected, nil
 		},
 	}}
 
 	body, code, header := getResponse(t, http.MethodGet, "/", s.GetAllBooks)
-	result := []pkg.Book{}
+	result := []teal.Book{}
 	err := FromJSON(body, &result)
 	checkErr(t, err)
 
@@ -61,9 +61,9 @@ func TestGetAllBooks(t *testing.T) {
 }
 
 func TestGetBook(t *testing.T) {
-	expected := &pkg.Book{Title: "FooBar", Author: "John Doe", ISBN: "52634"}
-	s := Server{books: &mockBookService{
-		getBookFn: func(id int) (*pkg.Book, error) {
+	expected := &teal.Book{Title: "FooBar", Author: "John Doe", ISBN: "52634"}
+	s := Server{Books: &mockBookService{
+		getBookFn: func(id int) (*teal.Book, error) {
 			return expected, nil
 		},
 	}}

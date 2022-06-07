@@ -4,11 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/kencx/teal/pkg"
+	teal "github.com/kencx/teal"
 )
 
-func (r *Repository) GetAuthor(id int) (*pkg.Author, error) {
-	var a pkg.Author
+func (r *Store) GetAuthor(id int) (*teal.Author, error) {
+	var a teal.Author
 
 	stmt, err := r.db.Prepare("SELECT id, name FROM book WHERE id = ?")
 	if err != nil {
@@ -26,18 +26,18 @@ func (r *Repository) GetAuthor(id int) (*pkg.Author, error) {
 	return &a, nil
 }
 
-func (r *Repository) GetAllAuthors() ([]*pkg.Author, error) {
+func (r *Store) GetAllAuthors() ([]*teal.Author, error) {
 
 	return nil, nil
 }
 
-func (r *Repository) CreateAuthor(a *pkg.Author) (int, error) {
+func (r *Store) CreateAuthor(a *teal.Author) (int, error) {
 	return 0, nil
 }
 
-func (r *Repository) UpdateAuthor(id int) error {
+func (r *Store) UpdateAuthor(id int) error {
 	return nil
 }
-func (r *Repository) DeleteAuthor(id int) error {
+func (r *Store) DeleteAuthor(id int) error {
 	return nil
 }

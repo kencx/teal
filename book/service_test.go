@@ -1,25 +1,25 @@
-package service
+package book
 
 import (
 	"reflect"
 	"testing"
 
-	"github.com/kencx/teal/pkg"
+	teal "github.com/kencx/teal"
 )
 
 type mockBookRepository struct {
-	bookList []*pkg.Book
+	bookList []*teal.Book
 }
 
-func (m *mockBookRepository) GetAllBooks() ([]*pkg.Book, error) {
+func (m *mockBookRepository) GetAllBooks() ([]*teal.Book, error) {
 	return m.bookList, nil
 }
 
-func (m *mockBookRepository) GetBook(id int) (*pkg.Book, error) {
+func (m *mockBookRepository) GetBook(id int) (*teal.Book, error) {
 	return m.bookList[id-1], nil
 }
 
-func (m *mockBookRepository) GetBookByTitle(title string) (*pkg.Book, error) {
+func (m *mockBookRepository) GetBookByTitle(title string) (*teal.Book, error) {
 	for _, b := range m.bookList {
 		if b.Title == title {
 			return b, nil
@@ -28,12 +28,12 @@ func (m *mockBookRepository) GetBookByTitle(title string) (*pkg.Book, error) {
 	return nil, nil
 }
 
-func (m *mockBookRepository) CreateBook(b *pkg.Book) (int, error) {
+func (m *mockBookRepository) CreateBook(b *teal.Book) (int, error) {
 	m.bookList = append(m.bookList, b)
 	return len(m.bookList), nil
 }
 
-func (m *mockBookRepository) UpdateBook(id int, b *pkg.Book) error {
+func (m *mockBookRepository) UpdateBook(id int, b *teal.Book) error {
 	m.bookList[id-1] = b
 	return nil
 }
@@ -43,20 +43,20 @@ func (m *mockBookRepository) DeleteBook(id int) error {
 	return nil
 }
 
-func TestGetBook(t *testing.T) {
+func TestGet(t *testing.T) {
 
 	t.Run("Get book", func(t *testing.T) {
 
-		expected := &pkg.Book{
+		expected := &teal.Book{
 			Title:  "FooBar",
 			Author: "John Doe",
 			ISBN:   "12345",
 		}
 		s := NewService(&mockBookRepository{
-			bookList: []*pkg.Book{expected},
+			bookList: []*teal.Book{expected},
 		})
 
-		result, err := s.GetBook(1)
+		result, err := s.Get(1)
 		checkErr(t, err)
 
 		if !reflect.DeepEqual(result, expected) {
@@ -67,7 +67,7 @@ func TestGetBook(t *testing.T) {
 	t.Run("invalid id", func(t *testing.T) {
 		s := NewService(&mockBookRepository{})
 
-		result, err := s.GetBook(-1)
+		result, err := s.Get(-1)
 		if err == nil {
 			t.Errorf("got %v, want %v", nil, err)
 		}
@@ -77,8 +77,8 @@ func TestGetBook(t *testing.T) {
 	})
 }
 
-func TestGetAllBooks(t *testing.T) {
-	expected := []*pkg.Book{
+func TestGetAll(t *testing.T) {
+	expected := []*teal.Book{
 		{
 			Title:  "FooBar",
 			Author: "John Doe",
@@ -94,7 +94,7 @@ func TestGetAllBooks(t *testing.T) {
 		bookList: expected,
 	})
 
-	result, err := s.GetAllBooks()
+	result, err := s.GetAll()
 	checkErr(t, err)
 
 	if !reflect.DeepEqual(result, expected) {
@@ -102,23 +102,23 @@ func TestGetAllBooks(t *testing.T) {
 	}
 }
 
-func TestCreateBook(t *testing.T) {
+func TestCreate(t *testing.T) {
 	s := NewService(&mockBookRepository{})
 
-	expected := &pkg.Book{
+	expected := &teal.Book{
 		Title:  "BarBaz",
 		Author: "John Doe",
 		ISBN:   "45678",
 	}
 
-	id, err := s.CreateBook(expected)
+	id, err := s.Create(expected)
 	checkErr(t, err)
 
 	if id != 1 {
 		t.Errorf("got %d, want %d", id, 1)
 	}
 
-	result, err := s.GetBook(id)
+	result, err := s.Get(id)
 	checkErr(t, err)
 
 	if !reflect.DeepEqual(result, expected) {
@@ -126,38 +126,38 @@ func TestCreateBook(t *testing.T) {
 	}
 }
 
-func TestUpdateBook(t *testing.T) {
-	s := NewService(&mockBookRepository{
-		bookList: []*pkg.Book{
-			{
-				Title:  "FooBar",
-				Author: "Ben Adams",
-				ISBN:   "45678",
-			},
-		},
-	})
+// func TestUpdate(t *testing.T) {
+// 	s := NewService(&mockBookRepository{
+// 		bookList: []*teal.Book{
+// 			{
+// 				Title:  "FooBar",
+// 				Author: "Ben Adams",
+// 				ISBN:   "45678",
+// 			},
+// 		},
+// 	})
+//
+// 	expected := &teal.Book{
+// 		Title:  "BarBaz",
+// 		Author: "John Doe",
+// 		ISBN:   "45678",
+// 	}
+//
+// 	err := s.Update(1, expected)
+// 	checkErr(t, err)
+//
+// 	result, err := s.Get(1)
+// 	checkErr(t, err)
+//
+// 	if !reflect.DeepEqual(result, expected) {
+// 		t.Errorf("got %v, want %v", result, expected)
+// 	}
+// }
 
-	expected := &pkg.Book{
-		Title:  "BarBaz",
-		Author: "John Doe",
-		ISBN:   "45678",
-	}
-
-	err := s.UpdateBook(1, expected)
-	checkErr(t, err)
-
-	result, err := s.GetBook(1)
-	checkErr(t, err)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("got %v, want %v", result, expected)
-	}
-}
-
-func TestDeleteBook(t *testing.T) {
+func TestDelete(t *testing.T) {
 	t.Run("delete book", func(t *testing.T) {
 		s := NewService(&mockBookRepository{
-			bookList: []*pkg.Book{
+			bookList: []*teal.Book{
 				{
 					Title:  "FooBar",
 					Author: "Ben Adams",
@@ -166,10 +166,10 @@ func TestDeleteBook(t *testing.T) {
 			},
 		})
 
-		err := s.DeleteBook(1)
+		err := s.Delete(1)
 		checkErr(t, err)
 
-		result, err := s.GetBook(1)
+		result, err := s.Get(1)
 		checkErr(t, err)
 
 		if result != nil {
@@ -180,7 +180,7 @@ func TestDeleteBook(t *testing.T) {
 	t.Run("invalid id", func(t *testing.T) {
 		s := NewService(&mockBookRepository{})
 
-		err := s.DeleteBook(-1)
+		err := s.Delete(-1)
 		if err == nil {
 			t.Errorf("got %v, want %v", nil, err)
 		}

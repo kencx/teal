@@ -1,4 +1,4 @@
-package pkg
+package teal
 
 type Series struct {
 	ID          int    `json:"id"`

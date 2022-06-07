@@ -5,8 +5,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/kencx/teal/pkg/http"
-	"github.com/kencx/teal/pkg/storage"
+	"github.com/kencx/teal/author"
+	"github.com/kencx/teal/book"
+	"github.com/kencx/teal/http"
+	"github.com/kencx/teal/storage"
 )
 
 func main() {
@@ -18,50 +20,50 @@ func main() {
 	signal.Notify(sigChan, os.Interrupt)
 	signal.Notify(sigChan, syscall.SIGTERM)
 	<-sigChan
-	a.HTTPServer.Logger.Println("[INFO] Received terminate, shutting down...")
+	a.server.InfoLog.Println("Received terminate, shutting down...")
 
 	a.Close()
-	a.HTTPServer.Logger.Println("[INFO] Application gracefully stopped")
+	a.server.InfoLog.Println("Application gracefully stopped")
 }
 
 type App struct {
-	DB         *storage.Repository
-	HTTPServer *http.Server
+	db     *storage.Store
+	server *http.Server
 }
 
 func NewApp() *App {
 	return &App{
-		DB:         storage.NewRepository("sqlite3"),
-		HTTPServer: http.NewServer(),
+		db:     storage.NewStore("sqlite3"),
+		server: http.NewServer(),
 	}
 }
 
 func (a *App) Run(port string) error {
 
-	a.DB.Open("./test.db")
-	a.HTTPServer.Logger.Println("[INFO] Database connection successfully established!")
+	a.db.Open("./test.db")
+	a.server.InfoLog.Println("Database connection successfully established!")
 
-	a.HTTPServer.Books = a.DB
-	// a.HTTPServer.Authors = a.DB
+	a.server.Books = book.NewService(a.db)
+	a.server.Authors = author.NewService(a.db)
 
-	if err := a.HTTPServer.Run(port); err != nil {
+	if err := a.server.Run(port); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (a *App) Close() error {
-	if a.DB != nil {
-		if err := a.DB.Close(); err != nil {
+	if a.db != nil {
+		if err := a.db.Close(); err != nil {
 			return err
 		}
-		a.HTTPServer.Logger.Println("[INFO] Database connection closed")
+		a.server.InfoLog.Println("Database connection closed")
 	}
-	if a.HTTPServer != nil {
-		if err := a.HTTPServer.Close(); err != nil {
+	if a.server != nil {
+		if err := a.server.Close(); err != nil {
 			return err
 		}
-		a.HTTPServer.Logger.Println("[INFO] Server connection closed")
+		a.server.InfoLog.Println("Server connection closed")
 	}
 	return nil
 }

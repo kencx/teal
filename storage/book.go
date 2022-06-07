@@ -5,43 +5,49 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kencx/teal/pkg"
+	"github.com/jmoiron/sqlx"
+	"github.com/kencx/teal"
 )
 
-func (r *Repository) GetBook(id int) (*pkg.Book, error) {
+func (r *Store) GetBook(id int) (*teal.Book, error) {
 	tx, err := r.db.Begin()
+func getBook(s *Store, id int) (*teal.Book, error) {
+	tx, err := s.db.Beginx()
 	if err != nil {
 		return nil, err
 	}
 	defer endTx(tx, err)
 
-	var b pkg.Book
-	if err := tx.QueryRow(`SELECT
+	var b teal.Book
+	if err := tx.Get(&b, `SELECT
 		id,
 		title,
-		author,
-		isbn
-	FROM books WHERE id = $1`, id).Scan(
-		&b.ID, &b.Title, &b.Author, &b.ISBN); err != nil {
-
+		description,
+		isbn,
+		numOfPages,
+		rating,
+		state,
+		dateAdded,
+		dateUpdated,
+		dateCompleted
+		FROM books WHERE id = $1`, id); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		} else if err != nil {
 			return nil, fmt.Errorf("db: unable to fetch book %d: %w", id, err)
 		}
 	}
-
 	return &b, nil
 }
 
-func (r *Repository) GetBookByTitle(title string) (*pkg.Book, error) {
+func (r *Store) GetBookByTitle(title string) (*teal.Book, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer endTx(tx, err)
 
-	var b pkg.Book
+	var b teal.Book
 	if err := tx.QueryRow(`SELECT
 		id,
 		title,
@@ -60,14 +66,14 @@ func (r *Repository) GetBookByTitle(title string) (*pkg.Book, error) {
 	return &b, nil
 }
 
-func (r *Repository) GetAllBooks() ([]*pkg.Book, error) {
+func (r *Store) GetAllBooks() ([]*teal.Book, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer endTx(tx, err)
 
-	var books []*pkg.Book
+	var books []*teal.Book
 	rows, err := tx.Query("SELECT id, title, author, isbn FROM books")
 	if err != nil {
 		return nil, fmt.Errorf("db: unable to fetch books: %w", err)
@@ -75,7 +81,7 @@ func (r *Repository) GetAllBooks() ([]*pkg.Book, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var b pkg.Book
+		var b teal.Book
 		err := rows.Scan(&b.ID, &b.Title, &b.Author, &b.ISBN)
 		if err != nil {
 			return nil, err
@@ -89,14 +95,34 @@ func (r *Repository) GetAllBooks() ([]*pkg.Book, error) {
 	return books, nil
 }
 
-func (r *Repository) CreateBook(b *pkg.Book) (int, error) {
-	tx, err := r.db.Begin()
+func insertBook(s *Store, b *teal.Book) (int, error) {
+	tx, err := s.db.Beginx()
 	if err != nil {
 		return -1, err
 	}
 	defer endTx(tx, err)
 
-	res, err := tx.Exec("INSERT INTO books (title, author, isbn) VALUES ($1, $2, $3)", b.Title, b.Author, b.ISBN)
+	res, err := tx.Exec(`INSERT into books (
+		title,
+		description,
+		isbn,
+		numOfPages,
+		rating,
+		state,
+		dateAdded,
+		dateUpdated,
+		dateCompleted)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		b.Title,
+		b.Description,
+		b.ISBN,
+		b.NumOfPages,
+		b.Rating,
+		b.State,
+		b.DateAdded,
+		b.DateUpdated,
+		b.DateCompleted)
+
 	if err != nil {
 		return -1, fmt.Errorf("db: unable to create book %q: %w", b.Title, err)
 	}
@@ -110,7 +136,7 @@ func (r *Repository) CreateBook(b *pkg.Book) (int, error) {
 	return int(lastId), nil
 }
 
-func (r *Repository) UpdateBook(id int, b *pkg.Book) error {
+func (r *Store) UpdateBook(id int, b *teal.Book) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -134,8 +160,8 @@ func (r *Repository) UpdateBook(id int, b *pkg.Book) error {
 	return nil
 }
 
-func (r *Repository) DeleteBook(id int) error {
-	tx, err := r.db.Begin()
+func deleteBook(s *Store, id int) error {
+	tx, err := s.db.Beginx()
 	if err != nil {
 		return err
 	}
@@ -154,11 +180,10 @@ func (r *Repository) DeleteBook(id int) error {
 	if count == 0 {
 		return errors.New("db: no books removed")
 	}
-
 	return nil
 }
 
-func endTx(tx *sql.Tx, err error) error {
+func endTx(tx *sqlx.Tx, err error) error {
 	if p := recover(); p != nil {
 		tx.Rollback()
 		panic(p)
@@ -169,54 +194,3 @@ func endTx(tx *sql.Tx, err error) error {
 		return tx.Commit()
 	}
 }
-
-// func ReadBook(id int) error {
-// 	i := findIndexByBookId(id)
-// 	if i == -1 {
-// 		return ErrBookNotFound
-// 	}
-//
-// 	b := bookList[i]
-// 	b.Read = "read"
-// 	// update date completed
-// 	return nil
-// }
-//
-// func ReadingBook(id int) error {
-// 	i := findIndexByBookId(id)
-// 	if i == -1 {
-// 		return ErrBookNotFound
-// 	}
-//
-// 	b := bookList[i]
-// 	b.Read = "reading"
-// 	// update date updated
-// 	return nil
-// }
-//
-// func UnreadBook(id int) error {
-// 	i := findIndexByBookId(id)
-// 	if i == -1 {
-// 		return ErrBookNotFound
-// 	}
-//
-// 	b := bookList[i]
-// 	b.Read = "unread"
-// 	return nil
-// }
-//
-// func TagBook(id int) error {
-// 	return nil
-// }
-//
-// func UntagBook(id int) error {
-// 	return nil
-// }
-//
-// func AddBookToCategory(id int) error {
-// 	return nil
-// }
-//
-// func RemoveBookFromCategory(id int) error {
-// 	return nil
-// }

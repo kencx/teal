@@ -1,4 +1,4 @@
-package pkg
+package teal
 
 type Tag struct {
 	ID          int    `json:"id"`

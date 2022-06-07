@@ -1,4 +1,4 @@
-package pkg
+package teal
 
 type Category struct {
 	ID          int    `json:"id"`
