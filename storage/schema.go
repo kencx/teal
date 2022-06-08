@@ -8,21 +8,21 @@ const (
 				DROP TABLE IF EXISTS books_authors;`
 
 	CREATE_TABLES = `CREATE TABLE IF NOT EXISTS books (
-		id            INTEGER PRIMARY KEY AUTOINCREMENT,
-		title         TEXT NOT NULL,
-		description   TEXT NULL,
-		isbn          TEXT NOT NULL UNIQUE,
-		numOfPages    INTEGER,
-		rating        TEXT,
-		state         TEXT,
-		dateAdded     INTEGER,
-		dateUpdated   INTEGER,
-		dateCompleted INTEGER
+	id            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	title         TEXT NOT NULL,
+	description   TEXT,
+	isbn          TEXT NOT NULL UNIQUE,
+	numOfPages    INTEGER DEFAULT 0,
+	rating        INTEGER DEFAULT 0,
+	state         TEXT NOT NULL DEFAULT "unread",
+	dateAdded     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	dateUpdated   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	dateCompleted TIMESTAMP
 	);
 
 	CREATE TABLE IF NOT EXISTS authors (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT NOT NULL
+		id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL UNIQUE
 	);
 
 	CREATE TABLE IF NOT EXISTS books_authors (
@@ -37,7 +37,7 @@ var (
 	testBook1 = &teal.Book{
 		ID:         1,
 		Title:      "Leviathan Wakes",
-		ISBN:       "9999",
+		ISBN:       "1",
 		NumOfPages: 250,
 		Rating:     5,
 		State:      "read",
@@ -46,7 +46,7 @@ var (
 	testBook2 = &teal.Book{
 		ID:         2,
 		Title:      "Red Rising",
-		ISBN:       "1234",
+		ISBN:       "2",
 		NumOfPages: 900,
 		Rating:     4,
 		State:      "unread",
@@ -55,7 +55,8 @@ var (
 	testBook3 = &teal.Book{
 		ID:     3,
 		Title:  "Many Authors",
-		ISBN:   "56789",
+		ISBN:   "3",
+		State:  "unread",
 		Author: []teal.Author{*testAuthor3, *testAuthor4, *testAuthor5},
 	}
 

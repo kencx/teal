@@ -24,9 +24,9 @@ type booksTable struct {
 	NumOfPages    sqlite.ColumnInteger
 	Rating        sqlite.ColumnInteger
 	State         sqlite.ColumnString
-	DateAdded     sqlite.ColumnInteger
-	DateUpdated   sqlite.ColumnInteger
-	DateCompleted sqlite.ColumnInteger
+	DateAdded     sqlite.ColumnTimestamp
+	DateUpdated   sqlite.ColumnTimestamp
+	DateCompleted sqlite.ColumnTimestamp
 
 	AllColumns     sqlite.ColumnList
 	MutableColumns sqlite.ColumnList
@@ -74,9 +74,9 @@ func newBooksTableImpl(schemaName, tableName, alias string) booksTable {
 		NumOfPagesColumn    = sqlite.IntegerColumn("numOfPages")
 		RatingColumn        = sqlite.IntegerColumn("rating")
 		StateColumn         = sqlite.StringColumn("state")
-		DateAddedColumn     = sqlite.IntegerColumn("dateAdded")
-		DateUpdatedColumn   = sqlite.IntegerColumn("dateUpdated")
-		DateCompletedColumn = sqlite.IntegerColumn("dateCompleted")
+		DateAddedColumn     = sqlite.TimestampColumn("dateAdded")
+		DateUpdatedColumn   = sqlite.TimestampColumn("dateUpdated")
+		DateCompletedColumn = sqlite.TimestampColumn("dateCompleted")
 		allColumns          = sqlite.ColumnList{IDColumn, TitleColumn, DescriptionColumn, IsbnColumn, NumOfPagesColumn, RatingColumn, StateColumn, DateAddedColumn, DateUpdatedColumn, DateCompletedColumn}
 		mutableColumns      = sqlite.ColumnList{TitleColumn, DescriptionColumn, IsbnColumn, NumOfPagesColumn, RatingColumn, StateColumn, DateAddedColumn, DateUpdatedColumn, DateCompletedColumn}
 	)

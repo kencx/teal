@@ -13,13 +13,6 @@ import (
 	. "github.com/kencx/teal/storage/sqlite/table"
 )
 
-var (
-	FULL_SELECT = SELECT(Books.AllColumns, Authors.AllColumns).
-		FROM(Books.
-			INNER_JOIN(BooksAuthors, BooksAuthors.BookID.EQ(Books.ID)).
-			INNER_JOIN(Authors, BooksAuthors.AuthorID.EQ(Authors.ID)))
-)
-
 func (s *Store) RetrieveBookWithID(id int) (*teal.Book, error) {
 	tx, err := s.db.Beginx()
 	if err != nil {
@@ -28,8 +21,31 @@ func (s *Store) RetrieveBookWithID(id int) (*teal.Book, error) {
 	defer endTx(tx, err)
 
 	var dest BookDest
-	if err := FULL_SELECT.WHERE(Books.ID.EQ(Int(int64(id)))).Query(tx, &dest); err != nil {
-		return nil, fmt.Errorf("db: retrieve book %q failed: %v", id, err)
+	if err := SELECT(Books.AllColumns, Authors.AllColumns).
+		FROM(Books.
+			INNER_JOIN(BooksAuthors, BooksAuthors.BookID.EQ(Books.ID)).
+			INNER_JOIN(Authors, BooksAuthors.AuthorID.EQ(Authors.ID))).
+		WHERE(Books.ID.EQ(Int(int64(id)))).Query(tx, &dest); err != nil {
+		return nil, fmt.Errorf("db: retrieve book %d failed: %v", id, err)
+	}
+	res := modelToBook(dest)
+	return res, nil
+}
+
+func (s *Store) RetrieveBookWithISBN(isbn string) (*teal.Book, error) {
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
+	}
+	defer endTx(tx, err)
+
+	var dest BookDest
+	if err := SELECT(Books.AllColumns, Authors.AllColumns).
+		FROM(Books.
+			INNER_JOIN(BooksAuthors, BooksAuthors.BookID.EQ(Books.ID)).
+			INNER_JOIN(Authors, BooksAuthors.AuthorID.EQ(Authors.ID))).
+		WHERE(Books.Isbn.EQ(String(isbn))).Query(tx, &dest); err != nil {
+		return nil, fmt.Errorf("db: retrieve book %q failed: %v", isbn, err)
 	}
 	res := modelToBook(dest)
 	return res, nil
@@ -43,11 +59,38 @@ func (s *Store) RetrieveBookWithTitle(title string) (*teal.Book, error) {
 	defer endTx(tx, err)
 
 	var dest BookDest
-	if err := FULL_SELECT.WHERE(Books.Title.EQ(String(title))).Query(tx, &dest); err != nil {
+	if err := SELECT(Books.AllColumns, Authors.AllColumns).
+		FROM(Books.
+			INNER_JOIN(BooksAuthors, BooksAuthors.BookID.EQ(Books.ID)).
+			INNER_JOIN(Authors, BooksAuthors.AuthorID.EQ(Authors.ID))).
+		WHERE(Books.Title.EQ(String(title))).Query(tx, &dest); err != nil {
 		return nil, fmt.Errorf("db: retrieve book %q failed: %v", title, err)
 	}
 	res := modelToBook(dest)
 	return res, nil
+}
+
+func (s *Store) RetrieveAllBooks() ([]*teal.Book, error) {
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
+	}
+	defer endTx(tx, err)
+
+	var dest []BookDest
+	if err := SELECT(Books.AllColumns, Authors.AllColumns).
+		FROM(Books.
+			INNER_JOIN(BooksAuthors, BooksAuthors.BookID.EQ(Books.ID)).
+			INNER_JOIN(Authors, BooksAuthors.AuthorID.EQ(Authors.ID))).
+		Query(tx, &dest); err != nil {
+		return nil, fmt.Errorf("db: retrieve all books failed: %v", err)
+	}
+
+	var books []*teal.Book
+	for _, b := range dest {
+		books = append(books, modelToBook(b))
+	}
+	return books, nil
 }
 
 // Create book entry in books, author entries in authors
@@ -62,15 +105,16 @@ func (s *Store) CreateBook(b *teal.Book) error {
 		if err != nil {
 			return err
 		}
+
 		a_ids, err := insertAuthors(tx, authors)
 		if err != nil {
 			return err
 		}
 
 		// insert into BookAuthors table for each author
-		for _, a := range a_ids {
+		for _, a_id := range a_ids {
 			_, err := BooksAuthors.INSERT(BooksAuthors.BookID, BooksAuthors.AuthorID).
-				VALUES(b_id, a).Exec(tx)
+				VALUES(b_id, a_id).Exec(tx)
 			if err != nil {
 				return fmt.Errorf("db: insert to book_authors table failed: %v", err)
 			}
@@ -107,8 +151,7 @@ func (s *Store) DeleteBook(id int) error {
 			return err
 		}
 
-		// delete authors?
-		// delete entry from booksAuthors table
+		// TODO delete entry from booksAuthors table
 		return nil
 
 	}, &sql.TxOptions{}); err != nil {
@@ -118,12 +161,12 @@ func (s *Store) DeleteBook(id int) error {
 }
 
 // insert book entry to books table
-func insertBook(tx *sqlx.Tx, b model.Books) (*int32, error) {
+func insertBook(tx *sqlx.Tx, b model.Books) (int32, error) {
 
 	var book model.Books
 	err := Books.INSERT(Books.MutableColumns).MODEL(b).RETURNING(Books.ID).Query(tx, &book)
 	if err != nil {
-		return nil, fmt.Errorf("db: insert to books table failed: %v", err)
+		return -1, fmt.Errorf("db: insert to books table failed: %v", err)
 	}
 	return book.ID, nil
 }
@@ -201,14 +244,14 @@ func modelToBook(dest BookDest) *teal.Book {
 	var authors teal.Authors
 	for _, a := range dest.Authors {
 		res := teal.Author{
-			ID:   int(*a.ID),
+			ID:   int(a.ID),
 			Name: a.Name,
 		}
 		authors = append(authors, res)
 	}
 
 	return &teal.Book{
-		ID:         int(*dest.ID),
+		ID:         int(dest.ID),
 		Title:      dest.Title,
 		ISBN:       dest.Isbn,
 		Author:     authors,
@@ -238,32 +281,3 @@ func bookToModel(b *teal.Book) BookDest {
 	}
 	return BookDest{books, authors}
 }
-
-// func getBook(s *Store, id int) (*teal.Book, error) {
-// 	tx, err := s.db.Beginx()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer endTx(tx, err)
-//
-// 	var b teal.Book
-// 	if err := tx.Get(&b, `SELECT
-// 		id,
-// 		title,
-// 		description,
-// 		isbn,
-// 		numOfPages,
-// 		rating,
-// 		state,
-// 		dateAdded,
-// 		dateUpdated,
-// 		dateCompleted
-// 		FROM books WHERE id = $1`, id); err != nil {
-// 		if err == sql.ErrNoRows {
-// 			return nil, nil
-// 		} else if err != nil {
-// 			return nil, fmt.Errorf("db: unable to fetch book %d: %w", id, err)
-// 		}
-// 	}
-// 	return &b, nil
-// }

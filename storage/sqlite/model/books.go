@@ -7,15 +7,19 @@
 
 package model
 
+import (
+	"time"
+)
+
 type Books struct {
-	ID            *int32 `sql:"primary_key"`
+	ID            int32 `sql:"primary_key"`
 	Title         string
 	Description   *string
 	Isbn          string
 	NumOfPages    *int32
 	Rating        *int32
 	State         string
-	DateAdded     *int32
-	DateUpdated   *int32
-	DateCompleted *int32
+	DateAdded     *time.Time
+	DateUpdated   *time.Time
+	DateCompleted *time.Time
 }
