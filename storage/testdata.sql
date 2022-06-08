@@ -26,6 +26,7 @@ CREATE TABLE books_authors (
 	PRIMARY KEY(book_id, author_id)
 );
 
+-- ORDER MATTERS, APPEND NEW DATA TO END
 -- book 1
 INSERT INTO books (
 	title, isbn, numOfPages, rating, state

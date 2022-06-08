@@ -1,0 +1,28 @@
+DROP TABLE IF EXISTS books;
+DROP TABLE IF EXISTS authors;
+DROP TABLE IF EXISTS books_authors;
+
+CREATE TABLE books (
+	id            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	title         TEXT NOT NULL,
+	description   TEXT,
+	isbn          TEXT NOT NULL UNIQUE,
+	numOfPages    INTEGER DEFAULT 0,
+	rating        INTEGER DEFAULT 0,
+	state         TEXT NOT NULL,
+	dateAdded     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	dateUpdated   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	dateCompleted TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE authors (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	name TEXT NOT NULL
+);
+
+CREATE TABLE books_authors (
+	book_id INTEGER REFERENCES books(id),
+	author_id INTEGER REFERENCES authors(id),
+	PRIMARY KEY(book_id, author_id)
+);
+

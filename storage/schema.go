@@ -32,6 +32,7 @@ const (
 	);`
 )
 
+// structs here are in testdata.sql
 var (
 	testBook1 = &teal.Book{
 		ID:         1,
@@ -40,36 +41,42 @@ var (
 		NumOfPages: 250,
 		Rating:     5,
 		State:      "read",
+		Author:     []teal.Author{*testAuthor1},
+	}
+	testBook2 = &teal.Book{
+		ID:         2,
+		Title:      "Red Rising",
+		ISBN:       "1234",
+		NumOfPages: 900,
+		Rating:     4,
+		State:      "unread",
+		Author:     []teal.Author{*testAuthor2},
+	}
+	testBook3 = &teal.Book{
+		ID:     3,
+		Title:  "Many Authors",
+		ISBN:   "56789",
+		Author: []teal.Author{*testAuthor3, *testAuthor4, *testAuthor5},
+	}
+
+	testAuthor1 = &teal.Author{
+		ID:   1,
+		Name: "S.A. Corey",
+	}
+	testAuthor2 = &teal.Author{
+		ID:   2,
+		Name: "Pierce Brown",
+	}
+	testAuthor3 = &teal.Author{
+		ID:   3,
+		Name: "John Doe",
+	}
+	testAuthor4 = &teal.Author{
+		ID:   4,
+		Name: "Regina Phallange",
+	}
+	testAuthor5 = &teal.Author{
+		ID:   5,
+		Name: "Ken Adams",
 	}
 )
-
-// func (r *Store) NewCreateBook(b *teal.Book) error {
-//
-// 	book_id, err := createBook(r, b)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	var author_ids []int
-// 	for _, a := range b.Author {
-// 		id, err := createAuthor(r, &a)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		author_ids = append(author_ids, id)
-// 	}
-//
-// 	tx, err := r.db.Begin()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer endTx(tx, err)
-//
-// 	for _, id := range author_ids {
-// 		_, err = tx.Exec(`INSERT INTO books_authors (book_id, author_id) VALUES ($1, $2)`, book_id, id)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }

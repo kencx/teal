@@ -6,7 +6,9 @@ import (
 	"reflect"
 	"testing"
 
+	// . "github.com/go-jet/jet/v2/sqlite"
 	"github.com/kencx/teal"
+	// . "github.com/kencx/teal/storage/sqlite/table"
 )
 
 // TODO replace with TestMain to speed up tests by
@@ -28,111 +30,89 @@ func setup(t *testing.T) *Store {
 	return db
 }
 
-func TestGetBook(t *testing.T) {
+func TestCreateBook(t *testing.T) {
 	db := setup(t)
 
-	got, err := getBook(db, 1)
-	checkErr(t, err)
-
-	want := testBook1
-
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
-	}
-}
-
-func TestInsertBook(t *testing.T) {
-	db := setup(t)
-
+	// TODO implement table driven tests
 	want := &teal.Book{
 		Title:      "World War Z",
 		ISBN:       "45678",
+		Author:     teal.Authors{{Name: "Max Brooks"}, {Name: "Second Author"}},
 		NumOfPages: 100,
 		Rating:     10,
 		State:      "read",
 	}
-	id, err := insertBook(db, want)
+	err := db.CreateBook(want)
 	checkErr(t, err)
 
-	got, err := getBook(db, id)
+	got, err := db.RetrieveBookWithTitle(want.Title)
 	checkErr(t, err)
 
-	if !reflect.DeepEqual(got, want) {
+	// TODO implement compare
+	if !compare(got, want) {
 		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 }
 
-func TestInsertTwoBooks(t *testing.T) {
-	db := setup(t)
-
-	want := []teal.Book{
-		{
-			Title:      "Persopolis Rising",
-			ISBN:       "500",
-			NumOfPages: 256,
-			Rating:     8,
-			State:      "unread",
-		},
-		{
-			Title:      "Dune",
-			ISBN:       "501",
-			NumOfPages: 1500,
-			Rating:     8,
-			State:      "read",
-		},
-	}
-
-	var got []teal.Book
-	for i, b := range want {
-		id, err := insertBook(db, &b)
-		checkErr(t, err)
-
-		want[i].ID = id // to ensure ID not 0
-
-		res, err := getBook(db, id)
-		checkErr(t, err)
-
-		got = append(got, *res)
-	}
-
-	if len(got) != len(want) {
-		t.Errorf("got %v, want %v", len(got), len(want))
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
-	}
+// compare books without ids
+func compare(b1, b2 *teal.Book) bool {
+	return false
 }
 
-func TestInsertNotUnique(t *testing.T) {
+func TestCreateBookNotUnique(t *testing.T) {
 	db := setup(t)
 
-	_, err := insertBook(db, testBook1)
+	err := db.CreateBook(testBook1)
 	if err == nil {
 		t.Errorf("expected error")
 	}
 }
 
-func TestDelete(t *testing.T) {
+func TestRetrieveBookWithID(t *testing.T) {
 	db := setup(t)
 
-	err := deleteBook(db, 1)
+	got, err := db.RetrieveBookWithID(testBook1.ID)
 	checkErr(t, err)
 
-	got, err := getBook(db, 1)
-	checkErr(t, err)
-	if got != nil {
-		t.Fatalf("got %v, want nil", prettyPrint(got))
+	want := testBook1
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 }
 
-func TestDeleteNotExists(t *testing.T) {
+func TestRetrieveBookWithTitle(t *testing.T) {
 	db := setup(t)
 
-	err := deleteBook(db, 999)
-	if err == nil {
-		t.Fatalf("expected error: book not exists")
+	got, err := db.RetrieveBookWithTitle(testBook2.Title)
+	checkErr(t, err)
+
+	want := testBook2
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 }
+
+// func TestDelete(t *testing.T) {
+// 	db := setup(t)
+//
+// 	err := deleteBook(db, 1)
+// 	checkErr(t, err)
+//
+// 	got, err := getBook(db, 1)
+// 	checkErr(t, err)
+// 	if got != nil {
+// 		t.Fatalf("got %v, want nil", prettyPrint(got))
+// 	}
+// }
+//
+// func TestDeleteNotExists(t *testing.T) {
+// 	db := setup(t)
+//
+// 	err := deleteBook(db, 999)
+// 	if err == nil {
+// 		t.Fatalf("expected error: book not exists")
+// 	}
+// }
 
 // func TestGetNotExists(t *testing.T) {
 // 	db := setup(t)
@@ -141,28 +121,6 @@ func TestDeleteNotExists(t *testing.T) {
 // 	checkErr(t, err)
 // 	if result != nil {
 // 		t.Fatalf("got %v, want nil", result)
-// 	}
-// }
-//
-// func TestGetByTitle(t *testing.T) {
-// 	db := setup(t)
-// 	expected := testdata["book1"].(*teal.Book)
-//
-// 	result, err := db.GetBookByTitle(expected.Title)
-// 	checkErr(t, err)
-//
-// 	if !reflect.DeepEqual(result, expected) {
-// 		t.Errorf("got %v, want %v", prettyPrint(result), prettyPrint(expected))
-// 	}
-// }
-//
-// func TestGetByTitleNotExists(t *testing.T) {
-// 	db := setup(t)
-//
-// 	result, err := db.GetBookByTitle("asdfgh")
-// 	checkErr(t, err)
-// 	if result != nil {
-// 		t.Fatalf("got %v, want nil", prettyPrint(result))
 // 	}
 // }
 //
@@ -182,36 +140,6 @@ func TestDeleteNotExists(t *testing.T) {
 // 		t.Errorf("got %v, want %v", result, expected)
 // 	}
 // }
-//
-// func TestCreate(t *testing.T) {
-// 	db := setup(t)
-//
-// 	a := &teal.Authors{
-// 		{Name: "S.A. Corey"},
-// 	}
-//
-// 	expected := &teal.Book{
-// 		Title:  "Leviathan Wakes",
-// 		Author: *a,
-// 		ISBN:   "99999",
-// 		// DateAdded:   time.Now().Format(time.RFC822),
-// 		// DateUpdated: time.Now().Format(time.RFC822),
-// 	}
-// 	err := db.CreateBook(expected)
-// 	checkErr(t, err)
-//
-// 	// check books table
-// 	// check authors table
-// 	// check books_authors table
-//
-// 	result, err := db.RetrieveBook(1)
-// 	checkErr(t, err)
-//
-// 	if !reflect.DeepEqual(result, expected) {
-// 		t.Errorf("got %v, want %v", prettyPrint(result), prettyPrint(expected))
-// 	}
-// }
-//
 //
 // func TestUpdate(t *testing.T) {
 // 	db := setup(t)
