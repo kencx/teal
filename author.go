@@ -1,9 +1,6 @@
 package teal
 
 type Author struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Books Books  `json:"books,omitempty"`
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
-
-type Authors []Author

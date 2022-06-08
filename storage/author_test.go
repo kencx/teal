@@ -4,14 +4,10 @@ import (
 	"reflect"
 	"testing"
 
-	// . "github.com/go-jet/jet/v2/sqlite"
 	"github.com/kencx/teal"
-	// . "github.com/kencx/teal/storage/sqlite/table"
 )
 
 func TestRetrieveAuthorWithID(t *testing.T) {
-	db := setup(t)
-
 	got, err := db.RetrieveAuthorWithID(testAuthor1.ID)
 	checkErr(t, err)
 
@@ -22,7 +18,6 @@ func TestRetrieveAuthorWithID(t *testing.T) {
 }
 
 func TestRetrieveAuthorWithName(t *testing.T) {
-	db := setup(t)
 
 	got, err := db.RetrieveAuthorWithName(testAuthor2.Name)
 	checkErr(t, err)
@@ -34,7 +29,6 @@ func TestRetrieveAuthorWithName(t *testing.T) {
 }
 
 func TestRetrieveAuthorNotExists(t *testing.T) {
-	db := setup(t)
 
 	result, err := db.RetrieveAuthorWithID(-1)
 	if err == nil {
@@ -47,23 +41,32 @@ func TestRetrieveAuthorNotExists(t *testing.T) {
 }
 
 func TestRetrieveAllAuthors(t *testing.T) {
-	db := setup(t)
 
 	got, err := db.RetrieveAllAuthors()
 	checkErr(t, err)
 
-	want := []*teal.Author{testAuthor1, testAuthor2, testAuthor3}
+	want := []*teal.Author{testAuthor1, testAuthor2, testAuthor3, testAuthor4, testAuthor5}
 
 	if len(got) != len(want) {
 		t.Fatalf("got %d books, want %d books", len(got), len(want))
 	}
 
-	// for i := 0; i < len(got); i++ {
-	// 	if !compareAuthor(got[i], want[i]) {
-	// 		t.Errorf("got %v, want %v", prettyPrint(got[i]), prettyPrint(want[i]))
-	// 	}
-	// 	if !compareAuthors(got[i].Author, want[i].Author) {
-	// 		t.Errorf("got %v, want %v", prettyPrint(got[i].Author), prettyPrint(want[i].Author))
-	// 	}
-	// }
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
+	}
+}
+
+func TestCreateAuthor(t *testing.T) {
+
+	want := &teal.Author{Name: "FooBar"}
+
+	err := db.CreateAuthor(want)
+	checkErr(t, err)
+
+	got, err := db.RetrieveAuthorWithName(want.Name)
+	checkErr(t, err)
+
+	if got.Name != want.Name {
+		t.Errorf("got %v, want %v", got.Name, want.Name)
+	}
 }

@@ -41,7 +41,7 @@ var (
 		NumOfPages: 250,
 		Rating:     5,
 		State:      "read",
-		Author:     []teal.Author{*testAuthor1},
+		Author:     []string{"S.A. Corey"},
 	}
 	testBook2 = &teal.Book{
 		ID:         2,
@@ -50,14 +50,14 @@ var (
 		NumOfPages: 900,
 		Rating:     4,
 		State:      "unread",
-		Author:     []teal.Author{*testAuthor2},
+		Author:     []string{"Pierce Brown"},
 	}
 	testBook3 = &teal.Book{
 		ID:     3,
 		Title:  "Many Authors",
 		ISBN:   "3",
 		State:  "unread",
-		Author: []teal.Author{*testAuthor3, *testAuthor4, *testAuthor5},
+		Author: []string{"John Doe", "Regina Phallange", "Ken Adams"},
 	}
 
 	testAuthor1 = &teal.Author{

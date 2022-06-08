@@ -12,7 +12,7 @@ type Book struct {
 	ID            int            `json:"id"`
 	Title         string         `json:"title" validate:"required" db:"title"`
 	Description   sql.NullString `json:"description,omitempty" db:"description"`
-	Author        Authors        `json:"author" validate:"required"`
+	Author        []string       `json:"author" validate:"required"`
 	ISBN          string         `json:"isbn" validate:"required,isbn" db:"isbn"`
 	NumOfPages    int            `json:"num_of_pages" db:"numOfPages"`
 	Rating        int            `json:"rating" db:"rating"`
@@ -22,8 +22,6 @@ type Book struct {
 	DateUpdated   sql.NullTime   `json:"-" db:"dateUpdated"`
 	DateCompleted sql.NullTime   `json:"-" db:"dateCompleted"`
 }
-
-type Books []Book
 
 // func (b Book) String() string {
 // 	return fmt.Sprintf(`id=%d title=%s desc=%s author=%v isbn=%s dateAdded=%s dateUpdated=%s dateCompleted=%s`,

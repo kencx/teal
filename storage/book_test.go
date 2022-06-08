@@ -5,12 +5,12 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"sort"
 	"testing"
 
-	. "github.com/go-jet/jet/v2/sqlite"
+	// . "github.com/go-jet/jet/v2/sqlite"
 	"github.com/kencx/teal"
-	"github.com/kencx/teal/storage/sqlite/model"
-	. "github.com/kencx/teal/storage/sqlite/table"
+	// . "github.com/kencx/teal/storage/sqlite/table"
 )
 
 var db = setup()
@@ -49,7 +49,17 @@ func TestRetrieveBookWithID(t *testing.T) {
 	checkErr(t, err)
 
 	want := testBook1
-	if !reflect.DeepEqual(got, want) {
+	if !compareBook(got, want) {
+		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
+	}
+}
+
+func TestRetrieveBookWithISBN(t *testing.T) {
+	got, err := db.RetrieveBookWithISBN(testBook1.ISBN)
+	checkErr(t, err)
+
+	want := testBook1
+	if !compareBook(got, want) {
 		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 }
@@ -59,7 +69,7 @@ func TestRetrieveBookWithTitle(t *testing.T) {
 	checkErr(t, err)
 
 	want := testBook2
-	if !reflect.DeepEqual(got, want) {
+	if !compareBook(got, want) {
 		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 }
@@ -79,6 +89,10 @@ func TestRetrieveAllBooks(t *testing.T) {
 	got, err := db.RetrieveAllBooks()
 	checkErr(t, err)
 
+	sort.Slice(got, func(i, j int) bool {
+		return got[i].ID < got[j].ID
+	})
+
 	want := []*teal.Book{testBook1, testBook2, testBook3}
 
 	if len(got) != len(want) {
@@ -88,9 +102,6 @@ func TestRetrieveAllBooks(t *testing.T) {
 	for i := 0; i < len(got); i++ {
 		if !compareBook(got[i], want[i]) {
 			t.Errorf("got %v, want %v", prettyPrint(got[i]), prettyPrint(want[i]))
-		}
-		if !compareAuthors(got[i].Author, want[i].Author) {
-			t.Errorf("got %v, want %v", prettyPrint(got[i].Author), prettyPrint(want[i].Author))
 		}
 	}
 }
@@ -104,14 +115,14 @@ func TestCreateBook(t *testing.T) {
 		want: &teal.Book{
 			Title:  "1984",
 			ISBN:   "1001",
-			Author: teal.Authors{{Name: "George Orwell"}},
+			Author: []string{"George Orwell"},
 		},
 	}, {
 		name: "book with all data",
 		want: &teal.Book{
 			Title:      "World War Z",
 			ISBN:       "1002",
-			Author:     teal.Authors{{Name: "Max Brooks"}},
+			Author:     []string{"Max Brooks"},
 			NumOfPages: 100,
 			Rating:     10,
 			State:      "read",
@@ -121,7 +132,7 @@ func TestCreateBook(t *testing.T) {
 		want: &teal.Book{
 			Title:      "Pro Git",
 			ISBN:       "1003",
-			Author:     teal.Authors{{Name: "Scott Chacon"}, {Name: "Ben Straub"}},
+			Author:     []string{"Scott Chacon", "Ben Straub"},
 			NumOfPages: 100,
 			Rating:     10,
 			State:      "read",
@@ -139,9 +150,6 @@ func TestCreateBook(t *testing.T) {
 			if !compareBook(got, tt.want) {
 				t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(tt.want))
 			}
-			if !compareAuthors(got.Author, tt.want.Author) {
-				t.Errorf("got %v, want %v", prettyPrint(got.Author), prettyPrint(tt.want.Author))
-			}
 		})
 	}
 }
@@ -157,7 +165,7 @@ func TestCreateBookExistingAuthor(t *testing.T) {
 	want := &teal.Book{
 		Title:      "New Book",
 		ISBN:       "1004",
-		Author:     teal.Authors{{Name: "John Doe"}},
+		Author:     []string{"John Doe"},
 		NumOfPages: 100,
 		Rating:     10,
 		State:      "unread",
@@ -172,15 +180,11 @@ func TestCreateBookExistingAuthor(t *testing.T) {
 	}
 	defer endTx(tx, err)
 
-	var dest []struct {
-		model.Authors
-	}
-
 	// check for number of entries in authors
-	if err := SELECT(Authors.Name).
-		FROM(Authors).
-		WHERE(Authors.Name.EQ(String(want.Author[0].Name))).
-		Query(tx, &dest); err != nil {
+	var dest []string
+
+	stmt := `SELECT name FROM authors WHERE name=$1`
+	if err := tx.Select(&dest, stmt, want.Author[0]); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
@@ -193,7 +197,7 @@ func TestCreateBookNewAndExistingAuthor(t *testing.T) {
 	want := &teal.Book{
 		Title:      "Thinking Fast and Slow",
 		ISBN:       "1005",
-		Author:     teal.Authors{{Name: "John Doe"}, {Name: "Newest Author"}},
+		Author:     []string{"John Doe", "Newest Author"},
 		NumOfPages: 100,
 		Rating:     10,
 		State:      "unread",
@@ -208,16 +212,11 @@ func TestCreateBookNewAndExistingAuthor(t *testing.T) {
 	}
 	defer endTx(tx, err)
 
-	var dest []struct {
-		model.Authors
-	}
-
 	// check for number of entries in authors
-	if err := SELECT(Authors.Name).
-		FROM(Authors).
-		WHERE(Authors.Name.EQ(String(want.Author[0].Name)).
-			OR(Authors.Name.EQ(String(want.Author[1].Name)))).
-		Query(tx, &dest); err != nil {
+	var dest []string
+
+	stmt := `SELECT name FROM authors WHERE name=$1 OR name=$2`
+	if err := tx.Select(&dest, stmt, want.Author[0], want.Author[1]); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
@@ -282,47 +281,50 @@ func TestCreateBookNewAndExistingAuthor(t *testing.T) {
 // 	}
 // }
 
-// func TestDelete(t *testing.T) {
-// 	db := setup()
-//
-// 	err := deleteBook(db, 1)
-// 	checkErr(t, err)
-//
-// 	got, err := getBook(db, 1)
-// 	checkErr(t, err)
-// 	if got != nil {
-// 		t.Fatalf("got %v, want nil", prettyPrint(got))
-// 	}
-// }
-//
-// func TestDeleteNotExists(t *testing.T) {
-// 	db := setup()
-//
-// 	err := deleteBook(db, 999)
-// 	if err == nil {
-// 		t.Fatalf("expected error: book not exists")
-// 	}
-// }
+func TestDeleteBook(t *testing.T) {
+
+	err := db.DeleteBook(testBook1.ID)
+	checkErr(t, err)
+
+	_, err = db.RetrieveBookWithID(testBook1.ID)
+	if err == nil {
+		t.Errorf("expected error, book %d not deleted", testBook1.ID)
+	}
+
+	tx, err := db.db.Beginx()
+	if err != nil {
+		t.Errorf("db: failed to start transaction: %v", err)
+	}
+	defer endTx(tx, err)
+
+	// check entries deleted from books_authors
+	var dest []int
+	stmt := `SELECT author_id FROM books_authors WHERE books_authors.book_id=$1`
+	if err := tx.Select(&dest, stmt, testBook1.ID); err != nil {
+		t.Errorf("")
+	}
+
+	if len(dest) != 0 {
+		t.Errorf("no rows deleted from books_authors for book %d", testBook1.ID)
+	}
+}
+
+func TestDeleteBookNotExists(t *testing.T) {
+
+	err := db.DeleteBook(-1)
+	if err == nil {
+		t.Fatalf("expected error: book not exists")
+	}
+}
 
 func compareBook(a, b *teal.Book) bool {
+	author := reflect.DeepEqual(a.Author, b.Author)
 	return (a.Title == b.Title &&
 		a.ISBN == b.ISBN &&
 		a.NumOfPages == b.NumOfPages &&
 		a.State == b.State &&
 		a.Rating == b.Rating &&
-		a.Read == b.Read)
-}
-
-func compareAuthors(a, b teal.Authors) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := 0; i < len(a); i++ {
-		if a[i].Name != b[i].Name {
-			return false
-		}
-	}
-	return true
+		a.Read == b.Read && author)
 }
 
 func checkErr(t *testing.T, err error) {
