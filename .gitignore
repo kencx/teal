@@ -1,3 +1,5 @@
 *.db
 teal
 frontend/
+
+cover.out

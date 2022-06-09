@@ -1,9 +1,43 @@
 package storage
 
 import (
+	"log"
 	"os"
 	"testing"
 )
+
+var db = setup()
+
+func TestMain(m *testing.M) {
+	defer func() {
+		db.dropTable()
+		db.Close()
+		os.Remove("./test.db")
+	}()
+	os.Exit(m.Run())
+}
+
+func setup() *Store {
+	db := NewStore("sqlite3")
+	err := db.Open("./test.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	initTestDB(db)
+	return db
+}
+
+func initTestDB(db *Store) {
+	err := db.ExecFile("./schema.sql")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = db.ExecFile("./testdata.sql")
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 
 func TestOpen(t *testing.T) {
 

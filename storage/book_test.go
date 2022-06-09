@@ -2,49 +2,15 @@ package storage
 
 import (
 	"encoding/json"
-	"log"
-	"os"
 	"reflect"
 	"sort"
 	"testing"
 
-	// . "github.com/go-jet/jet/v2/sqlite"
 	"github.com/kencx/teal"
-	// . "github.com/kencx/teal/storage/sqlite/table"
 )
 
-var db = setup()
-
-func TestMain(m *testing.M) {
-	defer func() {
-		db.dropTable()
-		db.Close()
-		os.Remove("./test.db")
-	}()
-	os.Exit(m.Run())
-}
-
-func setup() *Store {
-	db := NewStore("sqlite3")
-	err := db.Open("./test.db")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = db.ExecFile("./schema.sql")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// init test data
-	err = db.ExecFile("./testdata.sql")
-	if err != nil {
-		log.Fatal(err)
-	}
-	return db
-}
-
 func TestRetrieveBookWithID(t *testing.T) {
+	initTestDB(db) // reset DB
 	got, err := db.RetrieveBookWithID(testBook1.ID)
 	checkErr(t, err)
 
@@ -152,46 +118,9 @@ func TestCreateBook(t *testing.T) {
 			}
 
 			// check author entry created
-			for _, a := range tt.want.Author {
-				got, err := db.RetrieveAuthorWithName(a)
-				checkErr(t, err)
-
-				if got.Name != a {
-					t.Errorf("got %v, want %v", got.Name, a)
-				}
-			}
-
-			tx, err := db.db.Beginx()
-			if err != nil {
-				t.Errorf("db: failed to start transaction: %v", err)
-			}
-			defer endTx(tx, err)
-
+			assertAuthorsExist(t, tt.want)
 			// check books authors entry created
-			var dest []struct {
-				Title string
-				Name  string
-			}
-			stmt := `SELECT b.title, a.name FROM books_authors ba
-				JOIN books b ON b.id=ba.book_id
-				JOIN authors a ON a.id=ba.author_id
-				WHERE b.isbn=$1`
-			if err = tx.Select(&dest, stmt, tt.want.ISBN); err != nil {
-				t.Errorf("unexpected error %v", err)
-			}
-
-			if len(dest) != len(tt.want.Author) {
-				t.Errorf("book has wrong number of authors in books_authors table")
-			}
-
-			for i, d := range dest {
-				if d.Title != tt.want.Title {
-					t.Errorf("got %v, want %v", d.Title, tt.want.Title)
-				}
-				if d.Name != tt.want.Author[i] {
-					t.Errorf("got %v, want %v", d.Name, tt.want.Author[i])
-				}
-			}
+			assertBookAuthorRelationship(t, tt.want)
 		})
 	}
 }
@@ -205,9 +134,9 @@ func TestCreateBookExistingISBN(t *testing.T) {
 
 func TestCreateBookExistingAuthor(t *testing.T) {
 	want := &teal.Book{
-		Title:      "New Book",
+		Title:      "Morning Star",
 		ISBN:       "1004",
-		Author:     []string{"John Doe"},
+		Author:     []string{"Pierce Brown"},
 		NumOfPages: 100,
 		Rating:     10,
 		State:      "unread",
@@ -216,32 +145,28 @@ func TestCreateBookExistingAuthor(t *testing.T) {
 	err := db.CreateBook(want)
 	checkErr(t, err)
 
+	assertAuthorsExist(t, want)
+
 	tx, err := db.db.Beginx()
 	if err != nil {
 		t.Errorf("db: failed to start transaction: %v", err)
 	}
 	defer endTx(tx, err)
 
-	// check for number of entries in authors
-	var dest []string
+	// check books authors table should have two entries for john doe
+	books, err := getBooksFromAuthor(tx, want.Author[0])
+	checkErr(t, err)
 
-	stmt := `SELECT name FROM authors WHERE name=$1`
-	if err := tx.Select(&dest, stmt, want.Author[0]); err != nil {
-		t.Errorf("unexpected error: %v", err)
+	if len(books) != 2 {
+		t.Errorf("got %d books, want %d books for author %q", len(books), 2, want.Author[0])
 	}
-
-	if len(dest) != 1 {
-		t.Error("more than one author inserted")
-	}
-
-	// check books authors table should have two entries
 }
 
 func TestCreateBookNewAndExistingAuthor(t *testing.T) {
 	want := &teal.Book{
-		Title:      "Thinking Fast and Slow",
+		Title:      "Tiamat's Wrath",
 		ISBN:       "1005",
-		Author:     []string{"John Doe", "Newest Author"},
+		Author:     []string{"S.A. Corey", "Daniel Abrahams"},
 		NumOfPages: 100,
 		Rating:     10,
 		State:      "unread",
@@ -250,85 +175,173 @@ func TestCreateBookNewAndExistingAuthor(t *testing.T) {
 	err := db.CreateBook(want)
 	checkErr(t, err)
 
+	assertAuthorsExist(t, want)
+
 	tx, err := db.db.Beginx()
 	if err != nil {
 		t.Errorf("db: failed to start transaction: %v", err)
 	}
 	defer endTx(tx, err)
 
-	// check for number of entries in authors
-	var dest []string
+	num := []int{2, 1}
+	for i, v := range want.Author {
+		books, err := getBooksFromAuthor(tx, v)
+		checkErr(t, err)
 
-	stmt := `SELECT name FROM authors WHERE name=$1 OR name=$2`
-	if err := tx.Select(&dest, stmt, want.Author[0], want.Author[1]); err != nil {
-		t.Errorf("unexpected error: %v", err)
+		if len(books) != num[i] {
+			t.Errorf("got %d books, want %d books for author %q", len(books), num[i], v)
+		}
 	}
-
-	if len(dest) != 2 {
-		t.Error("more than one author inserted")
-	}
-
-	// check books authors table should have 3 entries for John Doe, 1 for Newest Author
 }
 
-// func TestUpdate(t *testing.T) {
-// 	db := setup()
-// 	id := testdata["book1"].(*teal.Book).ID
-//
-// 	expected := &teal.Book{
-// 		Title:  "The Linux Command Line",
-// 		Author: "William Shotts",
-// 		ISBN:   "59789",
-// 	}
-//
-// 	err := db.UpdateBook(id, expected)
-// 	checkErr(t, err)
-//
-// 	result, err := db.GetBook(id)
-// 	checkErr(t, err)
-//
-// 	if result.Title != expected.Title {
-// 		t.Errorf("got %v, want %v", result.Title, expected.Title)
-// 	}
-// 	if result.Author != expected.Author {
-// 		t.Errorf("got %v, want %v", result.Author, expected.Author)
-// 	}
-// 	if result.ISBN != expected.ISBN {
-// 		t.Errorf("got %v, want %v", result.ISBN, expected.ISBN)
-// 	}
-// }
-//
-// func TestUpdateNotExists(t *testing.T) {
-// 	db := setup()
-//
-// 	b := &teal.Book{
-// 		Title:  "The Linux Command Line",
-// 		Author: "William Shotts",
-// 		ISBN:   "59789",
-// 	}
-// 	err := db.UpdateBook(999, b)
-// 	if err == nil {
-// 		t.Fatalf("expected error: book not exists")
-// 	}
-// }
-//
-// func TestUpdateISBNConstraint(t *testing.T) {
-// 	db := setup()
-// 	id := testdata["book2"].(*teal.Book).ID
-//
-// 	b := &teal.Book{
-// 		Title:  "The Linux Command Line",
-// 		Author: "William Shotts",
-// 		ISBN:   "12345",
-// 	}
-// 	err := db.UpdateBook(id, b)
-// 	if err == nil {
-// 		t.Errorf("expected error")
-// 	}
-// }
+func TestUpdateBookNoAuthorChange(t *testing.T) {
+	want := testBook1
+	want.NumOfPages = 999
+	want.Rating = 1
+	want.State = "unread"
+
+	err := db.UpdateBook(want.ID, want)
+	checkErr(t, err)
+
+	got, err := db.RetrieveBookWithID(want.ID)
+	checkErr(t, err)
+
+	if !compareBook(got, want) {
+		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
+	}
+}
+
+func TestUpdateBookAddNewAuthor(t *testing.T) {
+	initTestDB(db) // reset DB
+
+	want := testBook1
+	want.Author = []string{"S.A. Corey", "Ty Franck"}
+
+	err := db.UpdateBook(want.ID, want)
+	checkErr(t, err)
+
+	got, err := db.RetrieveBookWithID(want.ID)
+	checkErr(t, err)
+
+	if !compareBook(got, want) {
+		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
+	}
+
+	assertAuthorsExist(t, want)
+	assertBookAuthorRelationship(t, want)
+}
+
+func TestUpdateBookAddExistingAuthor(t *testing.T) {
+	initTestDB(db) // reset DB
+	want := testBook1
+	want.Author = []string{"S.A. Corey", "John Doe"}
+
+	err := db.UpdateBook(want.ID, want)
+	checkErr(t, err)
+
+	got, err := db.RetrieveBookWithID(want.ID)
+	checkErr(t, err)
+
+	if !compareBook(got, want) {
+		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
+	}
+
+	assertAuthorsExist(t, want)
+	assertBookAuthorRelationship(t, want)
+}
+
+func TestUpdateBookRemoveAuthor(t *testing.T) {
+	initTestDB(db) // reset DB
+	want := testBook3
+	want.Author = []string{"Regina Phallange", "Ken Adams"}
+
+	err := db.UpdateBook(want.ID, want)
+	checkErr(t, err)
+
+	got, err := db.RetrieveBookWithID(want.ID)
+	checkErr(t, err)
+
+	if !compareBook(got, want) {
+		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
+	}
+
+	// check john doe still exists in authors table
+	_, err = db.RetrieveAuthorWithName(testAuthor3.Name)
+	checkErr(t, err)
+
+	// relationship with john doe dropped
+	assertBookAuthorRelationship(t, want)
+}
+
+func TestUpdateBookRemoveAuthorCompletely(t *testing.T) {
+	initTestDB(db) // reset DB
+	want := testBook3
+	want.Author = []string{"John Doe", "Regina Phallange"}
+
+	err := db.UpdateBook(want.ID, want)
+	checkErr(t, err)
+
+	got, err := db.RetrieveBookWithID(want.ID)
+	checkErr(t, err)
+
+	if !compareBook(got, want) {
+		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
+	}
+
+	// check ken adams dropped from authors table completely
+	_, err = db.RetrieveAuthorWithName(testAuthor5.Name)
+	if err == nil {
+		t.Errorf("expected error: author does not exist")
+	}
+
+	// relationship with ken adams dropped
+	assertBookAuthorRelationship(t, want)
+}
+
+func TestUpdateBookRenameAuthor(t *testing.T) {
+	initTestDB(db) // reset DB
+	want := testBook4
+	want.Author = []string{"John Adams"}
+
+	err := db.UpdateBook(want.ID, want)
+	checkErr(t, err)
+
+	got, err := db.RetrieveBookWithID(want.ID)
+	checkErr(t, err)
+
+	if !compareBook(got, want) {
+		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
+	}
+
+	assertAuthorsExist(t, want)
+
+	// check author still exists
+	_, err = db.RetrieveAuthorWithName(testAuthor3.Name)
+	checkErr(t, err)
+
+	// relationship with john doe dropped
+	// new relationship formed
+	assertBookAuthorRelationship(t, want)
+}
+
+func TestUpdateBookNotExists(t *testing.T) {
+	b := &teal.Book{}
+	err := db.UpdateBook(-1, b)
+	if err == nil {
+		t.Fatalf("expected error: book not exists")
+	}
+}
+
+func TestUpdateBookISBNConstraint(t *testing.T) {
+	want := testBook1
+	want.ISBN = testBook2.ISBN
+	err := db.UpdateBook(want.ID, want)
+	if err == nil {
+		t.Errorf("expected error: unique constraint ISBN")
+	}
+}
 
 func TestDeleteBook(t *testing.T) {
-
 	err := db.DeleteBook(testBook1.ID)
 	checkErr(t, err)
 
@@ -347,28 +360,22 @@ func TestDeleteBook(t *testing.T) {
 	var dest []int
 	stmt := `SELECT author_id FROM books_authors WHERE books_authors.book_id=$1`
 	if err := tx.Select(&dest, stmt, testBook1.ID); err != nil {
-		t.Errorf("no rows deleted from books_authors for book %d", testAuthor1.ID)
+		t.Errorf("unexpected err: %v", err)
 	}
 
 	if len(dest) != 0 {
 		t.Errorf("no rows deleted from books_authors for book %d", testBook1.ID)
 	}
 
-	// check author entry deleted from authors
-	var adest []string
-	stmt = `SELECT a.id FROM authors a
-		JOIN books_authors ba ON ba.author_id=a.id WHERE ba.book_id=$1`
-	if err := tx.Select(&adest, stmt, testBook1.ID); err != nil {
-		t.Errorf("no rows deleted from authors for book %d", testBook1.ID)
-	}
-
-	if len(dest) != 0 {
-		t.Errorf("no rows deleted from authors for book %d", testBook1.ID)
+	// check author entry completely deleted from authors
+	_, err = db.RetrieveAuthorWithName(testBook1.Author[0])
+	if err == nil {
+		t.Errorf("expected error, author %q not deleted", testBook1.Author[0])
 	}
 }
 
 func TestDeleteBookEnsureAuthorRemainsForExistingBooks(t *testing.T) {
-
+	initTestDB(db) // reset db
 	err := db.DeleteBook(testBook3.ID)
 	checkErr(t, err)
 
@@ -407,10 +414,44 @@ func TestDeleteBookEnsureAuthorRemainsForExistingBooks(t *testing.T) {
 }
 
 func TestDeleteBookNotExists(t *testing.T) {
-
 	err := db.DeleteBook(-1)
 	if err == nil {
 		t.Fatalf("expected error: book not exists")
+	}
+}
+
+func assertAuthorsExist(t *testing.T, want *teal.Book) {
+	t.Helper()
+	for _, author := range want.Author {
+		got, err := db.RetrieveAuthorWithName(author)
+		checkErr(t, err)
+
+		if got.Name != author {
+			t.Errorf("got %v, want %v", got.Name, author)
+		}
+	}
+}
+
+func assertBookAuthorRelationship(t *testing.T, book *teal.Book) {
+	t.Helper()
+	tx, err := db.db.Beginx()
+	if err != nil {
+		t.Errorf("db: failed to start transaction: %v", err)
+	}
+	defer endTx(tx, err)
+
+	// get book's related authors
+	authors, err := getAuthorsFromBook(tx, book.ISBN)
+	checkErr(t, err)
+
+	if len(authors) != len(book.Author) {
+		t.Errorf("book has wrong number of authors in books_authors table")
+	}
+
+	// author must exist in book's related authors
+	if !reflect.DeepEqual(authors, book.Author) {
+		t.Errorf("got %v, want %v", authors, book.Author)
+
 	}
 }
 
@@ -420,8 +461,7 @@ func compareBook(a, b *teal.Book) bool {
 		a.ISBN == b.ISBN &&
 		a.NumOfPages == b.NumOfPages &&
 		a.State == b.State &&
-		a.Rating == b.Rating &&
-		a.Read == b.Read && author)
+		a.Rating == b.Rating && author)
 }
 
 func checkErr(t *testing.T, err error) {
@@ -435,4 +475,13 @@ func checkErr(t *testing.T, err error) {
 func prettyPrint(i interface{}) string {
 	s, _ := json.MarshalIndent(i, "", "\t")
 	return string(s)
+}
+
+func contains(s []string, a string) bool {
+	for _, b := range s {
+		if a == b {
+			return true
+		}
+	}
+	return false
 }
