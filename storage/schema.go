@@ -34,6 +34,8 @@ const (
 
 // structs here are in testdata.sql
 var (
+	allBooks = []*teal.Book{testBook1, testBook2, testBook3, testBook4}
+
 	testBook1 = &teal.Book{
 		ID:         1,
 		Title:      "Leviathan Wakes",
@@ -58,6 +60,13 @@ var (
 		ISBN:   "3",
 		State:  "unread",
 		Author: []string{"John Doe", "Regina Phallange", "Ken Adams"},
+	}
+	testBook4 = &teal.Book{
+		ID:     4,
+		Title:  "New Book",
+		ISBN:   "4",
+		State:  "unread",
+		Author: []string{"John Doe"},
 	}
 
 	testAuthor1 = &teal.Author{

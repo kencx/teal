@@ -93,7 +93,7 @@ func TestRetrieveAllBooks(t *testing.T) {
 		return got[i].ID < got[j].ID
 	})
 
-	want := []*teal.Book{testBook1, testBook2, testBook3}
+	want := allBooks
 
 	if len(got) != len(want) {
 		t.Fatalf("got %d books, want %d books", len(got), len(want))
@@ -150,6 +150,48 @@ func TestCreateBook(t *testing.T) {
 			if !compareBook(got, tt.want) {
 				t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(tt.want))
 			}
+
+			// check author entry created
+			for _, a := range tt.want.Author {
+				got, err := db.RetrieveAuthorWithName(a)
+				checkErr(t, err)
+
+				if got.Name != a {
+					t.Errorf("got %v, want %v", got.Name, a)
+				}
+			}
+
+			tx, err := db.db.Beginx()
+			if err != nil {
+				t.Errorf("db: failed to start transaction: %v", err)
+			}
+			defer endTx(tx, err)
+
+			// check books authors entry created
+			var dest []struct {
+				Title string
+				Name  string
+			}
+			stmt := `SELECT b.title, a.name FROM books_authors ba
+				JOIN books b ON b.id=ba.book_id
+				JOIN authors a ON a.id=ba.author_id
+				WHERE b.isbn=$1`
+			if err = tx.Select(&dest, stmt, tt.want.ISBN); err != nil {
+				t.Errorf("unexpected error %v", err)
+			}
+
+			if len(dest) != len(tt.want.Author) {
+				t.Errorf("book has wrong number of authors in books_authors table")
+			}
+
+			for i, d := range dest {
+				if d.Title != tt.want.Title {
+					t.Errorf("got %v, want %v", d.Title, tt.want.Title)
+				}
+				if d.Name != tt.want.Author[i] {
+					t.Errorf("got %v, want %v", d.Name, tt.want.Author[i])
+				}
+			}
 		})
 	}
 }
@@ -191,6 +233,8 @@ func TestCreateBookExistingAuthor(t *testing.T) {
 	if len(dest) != 1 {
 		t.Error("more than one author inserted")
 	}
+
+	// check books authors table should have two entries
 }
 
 func TestCreateBookNewAndExistingAuthor(t *testing.T) {
@@ -223,6 +267,8 @@ func TestCreateBookNewAndExistingAuthor(t *testing.T) {
 	if len(dest) != 2 {
 		t.Error("more than one author inserted")
 	}
+
+	// check books authors table should have 3 entries for John Doe, 1 for Newest Author
 }
 
 // func TestUpdate(t *testing.T) {
@@ -301,11 +347,62 @@ func TestDeleteBook(t *testing.T) {
 	var dest []int
 	stmt := `SELECT author_id FROM books_authors WHERE books_authors.book_id=$1`
 	if err := tx.Select(&dest, stmt, testBook1.ID); err != nil {
-		t.Errorf("")
+		t.Errorf("no rows deleted from books_authors for book %d", testAuthor1.ID)
 	}
 
 	if len(dest) != 0 {
 		t.Errorf("no rows deleted from books_authors for book %d", testBook1.ID)
+	}
+
+	// check author entry deleted from authors
+	var adest []string
+	stmt = `SELECT a.id FROM authors a
+		JOIN books_authors ba ON ba.author_id=a.id WHERE ba.book_id=$1`
+	if err := tx.Select(&adest, stmt, testBook1.ID); err != nil {
+		t.Errorf("no rows deleted from authors for book %d", testBook1.ID)
+	}
+
+	if len(dest) != 0 {
+		t.Errorf("no rows deleted from authors for book %d", testBook1.ID)
+	}
+}
+
+func TestDeleteBookEnsureAuthorRemainsForExistingBooks(t *testing.T) {
+
+	err := db.DeleteBook(testBook3.ID)
+	checkErr(t, err)
+
+	// check author still exists in authors table
+	got, err := db.RetrieveAuthorWithName(testBook3.Author[0])
+	checkErr(t, err)
+
+	if got.Name != testBook3.Author[0] {
+		t.Errorf("got %v, want %v", got.Name, testBook3.Author[0])
+	}
+
+	tx, err := db.db.Beginx()
+	if err != nil {
+		t.Errorf("db: failed to start transaction: %v", err)
+	}
+	defer endTx(tx, err)
+
+	// check author still linked to their other books in books_authors
+	var dest []struct {
+		Book_id   int
+		Author_id int
+	}
+	stmt := `SELECT ba.book_id, ba.author_id
+		FROM books_authors ba
+		JOIN authors a ON a.id=ba.author_id
+		JOIN books b ON b.id=ba.book_id
+		WHERE a.name=$1`
+
+	if err := tx.Select(&dest, stmt, testBook3.Author[0]); err != nil {
+		t.Errorf("error")
+	}
+
+	if len(dest) < 1 {
+		t.Errorf("error")
 	}
 }
 

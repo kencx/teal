@@ -52,3 +52,12 @@ INSERT INTO books_authors (
 	((SELECT id FROM books WHERE title = "Many Authors"), (SELECT id FROM authors WHERE name = "Regina Phallange")),
 	((SELECT id FROM books WHERE title = "Many Authors"), (SELECT id FROM authors WHERE name = "Ken Adams"));
 
+-- book 4 existing author
+INSERT INTO books (
+	title, isbn
+) VALUES ("New Book", "4");
+
+INSERT INTO books_authors (
+	book_id, author_id
+	) VALUES
+	((SELECT id FROM books WHERE title = "New Book"), (SELECT id FROM authors WHERE name = "John Doe"));

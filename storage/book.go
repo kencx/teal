@@ -126,7 +126,6 @@ func (s *Store) CreateBook(b *teal.Book) error {
 
 		// establish book author relationship
 		for _, a_id := range a_ids {
-
 			stmt := `INSERT INTO books_authors (book_id, author_id) VALUES ($1, $2)`
 			_, err := tx.Exec(stmt, b_id, a_id)
 			if err != nil {
@@ -185,6 +184,7 @@ func (s *Store) CreateBook(b *teal.Book) error {
 
 func (s *Store) DeleteBook(id int) error {
 	if err := s.Tx(func(tx *sqlx.Tx) error {
+
 		err := deleteBook(tx, id)
 		if err != nil {
 			return err
@@ -204,6 +204,24 @@ func (s *Store) DeleteBook(id int) error {
 
 		if count == 0 {
 			return errors.New("no rows deleted from books_authors table")
+		}
+
+		// check for entries in authors with no books
+		stmt = `DELETE FROM authors WHERE id NOT IN
+				(SELECT author_id FROM books_authors)`
+		res, err = tx.Exec(stmt, id)
+		if err != nil {
+			return fmt.Errorf("db: delete author from authors table failed: %v", err)
+		}
+
+		count, err = res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("db: delete author from authors table failed: %v", err)
+		}
+
+		if count == 0 {
+			// TODO what should this return?
+			return nil
 		}
 		return nil
 
