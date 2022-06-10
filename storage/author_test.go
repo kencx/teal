@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"database/sql"
 	"reflect"
 	"testing"
 
@@ -18,7 +19,6 @@ func TestRetrieveAuthorWithID(t *testing.T) {
 }
 
 func TestRetrieveAuthorWithName(t *testing.T) {
-
 	got, err := db.RetrieveAuthorWithName(testAuthor2.Name)
 	checkErr(t, err)
 
@@ -29,10 +29,13 @@ func TestRetrieveAuthorWithName(t *testing.T) {
 }
 
 func TestRetrieveAuthorNotExists(t *testing.T) {
-
 	result, err := db.RetrieveAuthorWithID(-1)
 	if err == nil {
-		t.Fatalf("expected error")
+		t.Fatalf("expected error: sql.ErrNoRows")
+	}
+
+	if err != sql.ErrNoRows {
+		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if result != nil {
@@ -41,7 +44,6 @@ func TestRetrieveAuthorNotExists(t *testing.T) {
 }
 
 func TestRetrieveAllAuthors(t *testing.T) {
-
 	got, err := db.RetrieveAllAuthors()
 	checkErr(t, err)
 

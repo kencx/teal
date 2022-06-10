@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"database/sql"
 	"encoding/json"
 	"reflect"
 	"sort"
@@ -43,7 +44,11 @@ func TestRetrieveBookWithTitle(t *testing.T) {
 func TestRetrieveBookNotExists(t *testing.T) {
 	result, err := db.RetrieveBookWithID(-1)
 	if err == nil {
-		t.Fatalf("expected error")
+		t.Fatalf("expected error: sql.ErrNoRows")
+	}
+
+	if err != sql.ErrNoRows {
+		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if result != nil {

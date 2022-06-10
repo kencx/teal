@@ -28,9 +28,14 @@ func (s *Store) RetrieveBookWithID(id int) (*teal.Book, error) {
 		FROM books b
 		INNER JOIN books_authors ba ON ba.book_id=b.id
 		INNER JOIN authors a ON ba.author_id=a.id
-		WHERE b.id=$1;`
+		WHERE b.id=$1
+		GROUP BY b.id;`
 
-	if err = tx.QueryRowx(stmt, id).StructScan(&dest); err != nil {
+	err = tx.QueryRowx(stmt, id).StructScan(&dest)
+	if err == sql.ErrNoRows {
+		return nil, err
+	}
+	if err != nil {
 		return nil, fmt.Errorf("db: retrieve book id %d failed: %v", id, err)
 	}
 
@@ -50,9 +55,14 @@ func (s *Store) RetrieveBookWithISBN(isbn string) (*teal.Book, error) {
 		FROM books b
 		INNER JOIN books_authors ba ON ba.book_id=b.id
 		INNER JOIN authors a ON ba.author_id=a.id
-		WHERE b.isbn=$1;`
+		WHERE b.isbn=$1
+		GROUP BY b.isbn;`
 
-	if err = tx.QueryRowx(stmt, isbn).StructScan(&dest); err != nil {
+	err = tx.QueryRowx(stmt, isbn).StructScan(&dest)
+	if err == sql.ErrNoRows {
+		return nil, err
+	}
+	if err != nil {
 		return nil, fmt.Errorf("db: retrieve book isbn %q failed: %v", isbn, err)
 	}
 
@@ -72,9 +82,14 @@ func (s *Store) RetrieveBookWithTitle(title string) (*teal.Book, error) {
 		FROM books b
 		INNER JOIN books_authors ba ON ba.book_id=b.id
 		INNER JOIN authors a ON ba.author_id=a.id
-		WHERE b.title=$1;`
+		WHERE b.title=$1
+		GROUP BY b.title;`
 
-	if err = tx.QueryRowx(stmt, title).StructScan(&dest); err != nil {
+	err = tx.QueryRowx(stmt, title).StructScan(&dest)
+	if err == sql.ErrNoRows {
+		return nil, err
+	}
+	if err != nil {
 		return nil, fmt.Errorf("db: retrieve book title %q failed: %v", title, err)
 	}
 
@@ -97,7 +112,11 @@ func (s *Store) RetrieveAllBooks() ([]*teal.Book, error) {
 		GROUP BY b.title
 		ORDER BY b.title;`
 
-	if err = tx.Select(&dest, stmt); err != nil {
+	err = tx.Select(&dest, stmt)
+	if err == sql.ErrNoRows {
+		return nil, err
+	}
+	if err != nil {
 		return nil, fmt.Errorf("db: retrieve all books failed: %v", err)
 	}
 

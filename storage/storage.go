@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -84,5 +85,6 @@ func (r *Store) ExecFile(path string) error {
 	if _, err := r.db.Exec(string(query)); err != nil {
 		return fmt.Errorf("%v", err)
 	}
+	log.Printf("File %s loaded", path)
 	return nil
 }

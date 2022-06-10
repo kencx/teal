@@ -28,7 +28,11 @@ func (s *Store) RetrieveAllAuthorNames() ([]string, error) {
 
 	var dest []string
 	stmt := `SELECT name FROM authors;`
-	if err = tx.Select(&dest, stmt); err != nil {
+	err = tx.Select(&dest, stmt)
+	if err == sql.ErrNoRows {
+		return nil, err
+	}
+	if err != nil {
 		return nil, fmt.Errorf("db: retrieve all authors names failed: %v", err)
 	}
 	return dest, nil
@@ -43,7 +47,11 @@ func (s *Store) RetrieveAuthorWithID(id int) (*teal.Author, error) {
 
 	var dest teal.Author
 	stmt := `SELECT * FROM authors WHERE id=$1;`
-	if err = tx.QueryRowx(stmt, id).StructScan(&dest); err != nil {
+	err = tx.QueryRowx(stmt, id).StructScan(&dest)
+	if err == sql.ErrNoRows {
+		return nil, err
+	}
+	if err != nil {
 		return nil, fmt.Errorf("db: retrieve author %d failed: %v", id, err)
 	}
 	return &dest, nil
@@ -58,7 +66,11 @@ func (s *Store) RetrieveAuthorWithName(name string) (*teal.Author, error) {
 
 	var dest teal.Author
 	stmt := `SELECT * FROM authors WHERE name=$1;`
-	if err = tx.QueryRowx(stmt, name).StructScan(&dest); err != nil {
+	err = tx.QueryRowx(stmt, name).StructScan(&dest)
+	if err == sql.ErrNoRows {
+		return nil, err
+	}
+	if err != nil {
 		return nil, fmt.Errorf("db: retrieve author %q failed: %v", name, err)
 	}
 	return &dest, nil
@@ -73,7 +85,11 @@ func (s *Store) RetrieveAllAuthors() ([]*teal.Author, error) {
 
 	var dest []*teal.Author
 	stmt := `SELECT * FROM authors;`
-	if err = tx.Select(&dest, stmt); err != nil {
+	err = tx.Select(&dest, stmt)
+	if err == sql.ErrNoRows {
+		return nil, err
+	}
+	if err != nil {
 		return nil, fmt.Errorf("db: retrieve all authors failed: %v", err)
 	}
 	return dest, nil
