@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/kencx/teal"
 )
+
+type contextKey string
 
 type BookAuthorDest struct {
 	*teal.Book
@@ -110,7 +113,7 @@ func (s *Store) RetrieveAllBooks() ([]*teal.Book, error) {
 		INNER JOIN books_authors ba ON ba.book_id=b.id
 		INNER JOIN authors a ON ba.author_id=a.id
 		GROUP BY b.title
-		ORDER BY b.title;`
+		ORDER BY b.id;`
 
 	err = tx.Select(&dest, stmt)
 	if err == sql.ErrNoRows {
@@ -129,13 +132,14 @@ func (s *Store) RetrieveAllBooks() ([]*teal.Book, error) {
 }
 
 // Create book entry in books, author entries in authors
-func (s *Store) CreateBook(b *teal.Book) error {
+func (s *Store) CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error) {
 	if err := s.Tx(func(tx *sqlx.Tx) error {
 
-		b_id, err := insertBook(tx, b)
+		book, err := insertBook(tx, b)
 		if err != nil {
 			return err
 		}
+		ctx = context.WithValue(ctx, contextKey("book_id"), book)
 
 		// create authors
 		authors := parseAuthors(b.Author)
@@ -146,7 +150,7 @@ func (s *Store) CreateBook(b *teal.Book) error {
 
 		// establish new book author relationship
 		for _, a_id := range a_ids {
-			err := linkBookToAuthor(tx, b_id, a_id)
+			err := linkBookToAuthor(tx, int64(book.ID), a_id)
 			if err != nil {
 				return err
 			}
@@ -154,9 +158,14 @@ func (s *Store) CreateBook(b *teal.Book) error {
 		return nil
 
 	}, &sql.TxOptions{}); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+
+	book, ok := ctx.Value(contextKey("book_id")).(*teal.Book)
+	if !ok {
+		return nil, fmt.Errorf("db: failed to cast book")
+	}
+	return book, nil
 }
 
 // Update book details.
@@ -254,12 +263,13 @@ func (s *Store) DeleteBook(id int) error {
 }
 
 // insert book entry to books table
-func insertBook(tx *sqlx.Tx, b *teal.Book) (int64, error) {
+func insertBook(tx *sqlx.Tx, b *teal.Book) (*teal.Book, error) {
+	var book teal.Book
 
 	stmt := `INSERT INTO books
 		(title, description, isbn, numOfPages, rating, state, dateAdded, dateUpdated, dateCompleted)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`
-	res, err := tx.Exec(stmt,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *;`
+	err := tx.QueryRowx(stmt,
 		b.Title,
 		b.Description,
 		b.ISBN,
@@ -268,17 +278,13 @@ func insertBook(tx *sqlx.Tx, b *teal.Book) (int64, error) {
 		b.State,
 		b.DateAdded,
 		b.DateUpdated,
-		b.DateCompleted)
+		b.DateCompleted).StructScan(&book)
 
 	if err != nil {
-		return -1, fmt.Errorf("db: insert to books table failed: %v", err)
+		return nil, fmt.Errorf("db: insert to books table failed: %v", err)
 	}
-
-	id, err := res.LastInsertId()
-	if err != nil {
-		return -1, fmt.Errorf("db: insert to books table failed: %v", err)
-	}
-	return id, nil
+	book.Author = b.Author
+	return &book, nil
 }
 
 func updateBook(tx *sqlx.Tx, id int, b *teal.Book) error {

@@ -41,6 +41,12 @@ func NewApp() *App {
 func (a *App) Run(port string) error {
 
 	a.db.Open("./test.db")
+	if err := a.db.ExecFile("../testdata/schema.sql"); err != nil {
+		return err
+	}
+	if err := a.db.ExecFile("../../storage/testdata.sql"); err != nil {
+		return err
+	}
 	a.server.InfoLog.Println("Database connection successfully established!")
 
 	a.server.Books = book.NewService(a.db)

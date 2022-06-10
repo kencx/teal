@@ -48,12 +48,12 @@ func NewServer() *Server {
 func (s *Server) Run(port string) error {
 	s.Server.Addr = port
 
+	s.InfoLog.Println("Server listening on", port)
 	err := s.Server.ListenAndServe()
 	if err != nil {
 		return err
 	}
 
-	s.InfoLog.Println("Server listening on", port)
 	return nil
 }
 
@@ -81,6 +81,6 @@ func (s *Server) RegisterRoutes() {
 	putRouter.Use(s.MiddlewareBookValidation)
 
 	deleteRouter := s.Router.Methods(http.MethodDelete).Subrouter()
-	deleteRouter.HandleFunc("/{id:[0-9]+}", s.DeleteBook)
+	// deleteRouter.HandleFunc("/{id:[0-9]+}", s.DeleteBook)
 	deleteRouter.Use(s.MiddlewareBookValidation)
 }

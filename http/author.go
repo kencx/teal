@@ -1,17 +1,30 @@
 package http
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/kencx/teal"
+	"github.com/kencx/teal/json"
+)
+
+type AuthorService interface {
+	Get(id int) (*teal.Author, error)
+	GetAll() ([]*teal.Author, error)
+	Create(b *teal.Author) (int, error)
+	// Update(id int, b *teal.Author) error
+	Delete(id int) error
+}
 
 func (s *Server) GetAllAuthors(rw http.ResponseWriter, r *http.Request) {
 	b, err := s.Authors.GetAll()
 	if err != nil {
-		s.Logger.Printf("[ERROR] %v", err)
+		s.ErrLog.Print(err)
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 
-	res, err := ToJSON(b)
+	res, err := json.ToJSON(b)
 	if err != nil {
-		s.Logger.Printf("[ERROR] %v", err)
+		s.ErrLog.Print(err)
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}

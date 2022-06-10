@@ -7,9 +7,9 @@ import (
 )
 
 type Store interface {
-	GetAuthor(id int) (*teal.Author, error)
-	GetAllAuthors() ([]*teal.Author, error)
-	CreateAuthor(b *teal.Author) (int, error)
+	RetrieveAuthorWithID(id int) (*teal.Author, error)
+	RetrieveAllAuthors() ([]*teal.Author, error)
+	CreateAuthor(b *teal.Author) error
 	// UpdateAuthor(id int, b *teal.Author) error
 	DeleteAuthor(id int) error
 }
@@ -29,7 +29,7 @@ func (s *Service) Get(id int) (*teal.Author, error) {
 		return nil, fmt.Errorf("svc: invalid id %d", id)
 	}
 
-	b, err := s.db.GetAuthor(id)
+	b, err := s.db.RetrieveAuthorWithID(id)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (s *Service) Get(id int) (*teal.Author, error) {
 }
 
 func (s *Service) GetAll() ([]*teal.Author, error) {
-	b, err := s.db.GetAllAuthors()
+	b, err := s.db.RetrieveAllAuthors()
 	if err != nil {
 		return nil, err
 	}
@@ -49,12 +49,12 @@ func (s *Service) GetAll() ([]*teal.Author, error) {
 func (s *Service) Create(b *teal.Author) (int, error) {
 	// validate b
 
-	id, err := s.db.CreateAuthor(b)
+	err := s.db.CreateAuthor(b)
 	if err != nil {
 		return -1, err
 	}
 
-	return id, nil
+	return 0, nil
 }
 
 func (s *Service) Delete(id int) error {

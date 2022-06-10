@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"reflect"
@@ -112,10 +113,7 @@ func TestCreateBook(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := db.CreateBook(tt.want)
-			checkErr(t, err)
-
-			got, err := db.RetrieveBookWithISBN(tt.want.ISBN)
+			got, err := db.CreateBook(context.Background(), tt.want)
 			checkErr(t, err)
 
 			if !compareBook(got, tt.want) {
@@ -131,7 +129,7 @@ func TestCreateBook(t *testing.T) {
 }
 
 func TestCreateBookExistingISBN(t *testing.T) {
-	err := db.CreateBook(testBook2)
+	_, err := db.CreateBook(context.Background(), testBook2)
 	if err == nil {
 		t.Errorf("expected error")
 	}
@@ -147,7 +145,7 @@ func TestCreateBookExistingAuthor(t *testing.T) {
 		State:      "unread",
 	}
 
-	err := db.CreateBook(want)
+	_, err := db.CreateBook(context.Background(), want)
 	checkErr(t, err)
 
 	assertAuthorsExist(t, want)
@@ -177,7 +175,7 @@ func TestCreateBookNewAndExistingAuthor(t *testing.T) {
 		State:      "unread",
 	}
 
-	err := db.CreateBook(want)
+	_, err := db.CreateBook(context.Background(), want)
 	checkErr(t, err)
 
 	assertAuthorsExist(t, want)

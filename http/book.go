@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,62 +10,81 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/kencx/teal"
+	"github.com/kencx/teal/http/response"
+	"github.com/kencx/teal/json"
 )
 
 type KeyBook struct{}
 
-func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
-	b, err := s.Books.GetAll()
-	if err != nil {
-		s.Logger.Printf("[ERROR] %v", err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-	}
-
-	res, err := ToJSON(b)
-	if err != nil {
-		s.Logger.Printf("[ERROR] %v", err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if len(res) == 0 {
-		rw.Write([]byte("No books added"))
-		return
-	}
-	rw.Header().Set("Content-Type", "application/json")
-	rw.Write(res)
+type BookService interface {
+	Get(id int) (*teal.Book, error)
+	GetByTitle(title string) (*teal.Book, error)
+	GetAll() ([]*teal.Book, error)
+	Create(ctx context.Context, b *teal.Book) (*teal.Book, error)
+	// Update(id int, b *teal.Book) error
+	Delete(id int) error
 }
 
 func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 	id := HandleId(rw, r)
 
 	b, err := s.Books.Get(id)
-	if err != nil {
-		s.Logger.Printf("[ERROR] %v", err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+	if err == sql.ErrNoRows {
+		s.InfoLog.Printf("No book %d found", id)
+		response.NoContent(rw, r)
 		return
 	}
 
-	res, err := ToJSON(b)
 	if err != nil {
-		s.Logger.Printf("[ERROR] %v", err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		response.Error(rw, r, err)
 		return
 	}
-	rw.Header().Set("Content-Type", "application/json")
-	rw.Write(res)
+
+	res, err := json.ToJSON(b)
+	if err != nil {
+		response.Error(rw, r, err)
+		return
+	}
+
+	s.InfoLog.Printf("Book %d returned", id)
+	response.OK(rw, r, res)
+}
+
+func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
+	b, err := s.Books.GetAll()
+	if err != nil {
+		response.Error(rw, r, err)
+		return
+	}
+
+	res, err := json.ToJSON(b)
+	if err != nil {
+		response.Error(rw, r, err)
+		return
+	}
+
+	s.InfoLog.Printf("%d books returned", len(b))
+	response.OK(rw, r, res)
 }
 
 func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 	book := r.Context().Value(KeyBook{}).(teal.Book)
-	id, err := s.Books.Create(&book)
+
+	result, err := s.Books.Create(r.Context(), &book)
 	if err != nil {
-		s.Logger.Printf("[ERROR] %v", err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		s.ErrLog.Print(err)
+		response.Error(rw, r, err)
 		return
 	}
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(rw, "Book %d created", id)
+
+	body, err := json.ToJSON(result)
+	if err != nil {
+		s.ErrLog.Print(err)
+		response.Error(rw, r, err)
+		return
+	}
+	s.InfoLog.Printf("Book %v created", result)
+	response.Created(rw, r, body)
 }
 
 // func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
@@ -80,23 +100,24 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 // 		http.Error(rw, "Book not found", http.StatusInternalServerError)
 // 		return
 // 	}
-// 	s.Logger.Println("Handle PUT Book", id)
+// 	s.ErrLog.Println("Handle PUT Book", id)
 // }
 
-func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
-	id := HandleId(rw, r)
-
-	err := s.Books.Delete(id)
-	if err == teal.ErrBookNotFound {
-		http.Error(rw, "Book not found", http.StatusNotFound)
-		return
-	}
-	if err != nil {
-		http.Error(rw, "Book not found", http.StatusInternalServerError)
-		return
-	}
-	s.Logger.Println("Handle DELETE Book", id)
-}
+// func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
+// 	id := HandleId(rw, r)
+//
+// 	err := s.Books.Delete(id)
+// 	if err == teal.ErrBookNotFound {
+// 		http.Error(rw, "Book not found", http.StatusNotFound)
+// 		return
+// 	}
+// 	if err != nil {
+// 		s.ErrLog.Println("Book not found")
+// 		http.Error(rw, "Book not found", http.StatusInternalServerError)
+// 		return
+// 	}
+// 	s.InfoLog.Println("Handle DELETE Book", id)
+// }
 
 func HandleId(rw http.ResponseWriter, r *http.Request) int {
 	vars := mux.Vars(r)
@@ -106,7 +127,7 @@ func HandleId(rw http.ResponseWriter, r *http.Request) int {
 		return 0
 	}
 	if err != nil {
-		http.Error(rw, "Unable to convert id", http.StatusBadRequest)
+		response.Error(rw, r, fmt.Errorf("unable to process id"))
 		return -1
 	}
 	return id
@@ -118,19 +139,20 @@ func (s Server) MiddlewareBookValidation(next http.Handler) http.Handler {
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			http.Error(rw, err.Error(), http.StatusBadRequest)
+			response.Error(rw, r, err)
 			return
 		}
-		err = FromJSON(body, &book)
+		err = json.FromJSON(body, &book)
 		if err != nil {
-			http.Error(rw, err.Error(), http.StatusBadRequest)
+			response.Error(rw, r, err)
 			return
 		}
 
+		// TODO should this be in middleware or service layer?
 		err = book.Validate()
 		if err != nil {
-			s.Logger.Println("[ERROR] validating book", err)
-			http.Error(rw, fmt.Sprintf("Error validating book: %s", err), http.StatusBadRequest)
+			s.ErrLog.Printf("validating book failed: %v", err)
+			response.Error(rw, r, fmt.Errorf("validation for book failed: %v", err))
 			return
 		}
 

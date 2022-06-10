@@ -9,7 +9,7 @@ import (
 )
 
 type Book struct {
-	ID            int            `json:"id"`
+	ID            int            `json:"id" db:"id"`
 	Title         string         `json:"title" validate:"required" db:"title"`
 	Description   sql.NullString `json:"description,omitempty" db:"description"`
 	Author        []string       `json:"author" validate:"required"`
@@ -17,7 +17,6 @@ type Book struct {
 	NumOfPages    int            `json:"num_of_pages" db:"numOfPages"`
 	Rating        int            `json:"rating" db:"rating"`
 	State         string         `json:"state" db:"state"` // default empty
-	Read          string         `json:"read" db:"read"`   // default unread
 	DateAdded     sql.NullTime   `json:"-" db:"dateAdded"`
 	DateUpdated   sql.NullTime   `json:"-" db:"dateUpdated"`
 	DateCompleted sql.NullTime   `json:"-" db:"dateCompleted"`

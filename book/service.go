@@ -1,16 +1,17 @@
 package book
 
 import (
+	"context"
 	"fmt"
 
 	teal "github.com/kencx/teal"
 )
 
 type Store interface {
-	GetBook(id int) (*teal.Book, error)
-	GetBookByTitle(title string) (*teal.Book, error)
-	GetAllBooks() ([]*teal.Book, error)
-	CreateBook(b *teal.Book) (int, error)
+	RetrieveBookWithID(id int) (*teal.Book, error)
+	RetrieveBookWithTitle(title string) (*teal.Book, error)
+	RetrieveAllBooks() ([]*teal.Book, error)
+	CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error)
 	UpdateBook(id int, b *teal.Book) error
 	DeleteBook(id int) error
 }
@@ -30,7 +31,7 @@ func (s *Service) Get(id int) (*teal.Book, error) {
 		return nil, fmt.Errorf("svc: invalid id %d", id)
 	}
 
-	b, err := s.db.GetBook(id)
+	b, err := s.db.RetrieveBookWithID(id)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +42,7 @@ func (s *Service) Get(id int) (*teal.Book, error) {
 func (s *Service) GetByTitle(title string) (*teal.Book, error) {
 	// input validate title
 
-	b, err := s.db.GetBookByTitle(title)
+	b, err := s.db.RetrieveBookWithTitle(title)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +51,7 @@ func (s *Service) GetByTitle(title string) (*teal.Book, error) {
 }
 
 func (s *Service) GetAll() ([]*teal.Book, error) {
-	b, err := s.db.GetAllBooks()
+	b, err := s.db.RetrieveAllBooks()
 	if err != nil {
 		return nil, err
 	}
@@ -58,15 +59,15 @@ func (s *Service) GetAll() ([]*teal.Book, error) {
 	return b, nil
 }
 
-func (s *Service) Create(b *teal.Book) (int, error) {
+func (s *Service) Create(ctx context.Context, b *teal.Book) (*teal.Book, error) {
 	// validate b
 
-	id, err := s.db.CreateBook(b)
+	book, err := s.db.CreateBook(ctx, b)
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
 
-	return id, nil
+	return book, nil
 }
 
 func (s *Service) Delete(id int) error {
