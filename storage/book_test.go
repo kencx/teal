@@ -220,10 +220,7 @@ func TestUpdateBookNoAuthorChange(t *testing.T) {
 	want.Rating = 1
 	want.State = "unread"
 
-	err := db.UpdateBook(context.Background(), want.ID, want)
-	checkErr(t, err)
-
-	got, err := db.RetrieveBookWithID(want.ID)
+	got, err := db.UpdateBook(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	if !compareBook(got, want) {
@@ -237,10 +234,7 @@ func TestUpdateBookAddNewAuthor(t *testing.T) {
 	want := testBook1
 	want.Author = []string{"S.A. Corey", "Ty Franck"}
 
-	err := db.UpdateBook(context.Background(), want.ID, want)
-	checkErr(t, err)
-
-	got, err := db.RetrieveBookWithID(want.ID)
+	got, err := db.UpdateBook(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	if !compareBook(got, want) {
@@ -256,10 +250,7 @@ func TestUpdateBookAddExistingAuthor(t *testing.T) {
 	want := testBook1
 	want.Author = []string{"S.A. Corey", "John Doe"}
 
-	err := db.UpdateBook(context.Background(), want.ID, want)
-	checkErr(t, err)
-
-	got, err := db.RetrieveBookWithID(want.ID)
+	got, err := db.UpdateBook(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	if !compareBook(got, want) {
@@ -275,10 +266,7 @@ func TestUpdateBookRemoveAuthor(t *testing.T) {
 	want := testBook3
 	want.Author = []string{"Regina Phallange", "Ken Adams"}
 
-	err := db.UpdateBook(context.Background(), want.ID, want)
-	checkErr(t, err)
-
-	got, err := db.RetrieveBookWithID(want.ID)
+	got, err := db.UpdateBook(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	if !compareBook(got, want) {
@@ -298,10 +286,7 @@ func TestUpdateBookRemoveAuthorCompletely(t *testing.T) {
 	want := testBook3
 	want.Author = []string{"John Doe", "Regina Phallange"}
 
-	err := db.UpdateBook(context.Background(), want.ID, want)
-	checkErr(t, err)
-
-	got, err := db.RetrieveBookWithID(want.ID)
+	got, err := db.UpdateBook(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	if !compareBook(got, want) {
@@ -323,10 +308,7 @@ func TestUpdateBookRenameAuthor(t *testing.T) {
 	want := testBook4
 	want.Author = []string{"John Adams"}
 
-	err := db.UpdateBook(context.Background(), want.ID, want)
-	checkErr(t, err)
-
-	got, err := db.RetrieveBookWithID(want.ID)
+	got, err := db.UpdateBook(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	if !compareBook(got, want) {
@@ -346,7 +328,7 @@ func TestUpdateBookRenameAuthor(t *testing.T) {
 
 func TestUpdateBookNotExists(t *testing.T) {
 	b := &teal.Book{}
-	err := db.UpdateBook(context.Background(), -1, b)
+	_, err := db.UpdateBook(context.Background(), -1, b)
 	if err == nil {
 		t.Fatalf("expected error: no books updated")
 	}
@@ -355,7 +337,7 @@ func TestUpdateBookNotExists(t *testing.T) {
 func TestUpdateBookISBNConstraint(t *testing.T) {
 	want := testBook1
 	want.ISBN = testBook2.ISBN
-	err := db.UpdateBook(context.Background(), want.ID, want)
+	_, err := db.UpdateBook(context.Background(), want.ID, want)
 	if err == nil {
 		t.Errorf("expected error: unique constraint ISBN")
 	}

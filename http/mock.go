@@ -11,7 +11,7 @@ type mockBookService struct {
 	getBookFn        func(id int) (*teal.Book, error)
 	getBookByTitleFn func(title string) (*teal.Book, error)
 	createBookFn     func(ctx context.Context, b *teal.Book) (*teal.Book, error)
-	updateBookFn     func(ctx context.Context, id int, b *teal.Book) error
+	updateBookFn     func(ctx context.Context, id int, b *teal.Book) (*teal.Book, error)
 	deleteBookFn     func(ctx context.Context, id int) error
 }
 
@@ -31,7 +31,7 @@ func (m *mockBookService) Create(ctx context.Context, b *teal.Book) (*teal.Book,
 	return m.createBookFn(ctx, b)
 }
 
-func (m *mockBookService) Update(ctx context.Context, id int, b *teal.Book) error {
+func (m *mockBookService) Update(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
 	return m.updateBookFn(ctx, id, b)
 }
 

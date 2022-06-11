@@ -19,14 +19,17 @@ type BookService interface {
 	GetByTitle(title string) (*teal.Book, error)
 	GetAll() ([]*teal.Book, error)
 	Create(ctx context.Context, b *teal.Book) (*teal.Book, error)
-	// Update(id int, b *teal.Book) error
+	Update(ctx context.Context, id int, b *teal.Book) (*teal.Book, error)
 	Delete(ctx context.Context, id int) error
 }
 
 func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 	id := HandleId(rw, r)
-	b, err := s.Books.Get(id)
+	if id == -1 {
+		return
+	}
 
+	b, err := s.Books.Get(id)
 	if err == teal.ErrDoesNotExist {
 		s.InfoLog.Printf("Book %d not found", id)
 		response.NotFound(rw, r, err)
@@ -100,7 +103,7 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 
 	body, err := util.ToJSON(result)
 	if err != nil {
-		s.ErrLog.Print(err)
+		s.ErrLog.Println(err)
 		response.Error(rw, r, err)
 		return
 	}
@@ -108,48 +111,83 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 	response.Created(rw, r, body)
 }
 
-// func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
-// 	id := HandleId(rw, r)
-// 	book := r.Context().Value(KeyBook{}).(teal.Book)
-//
-// 	err := s.Books.Update(id, &book)
-// 	if err == teal.ErrBookNotFound {
-// 		http.Error(rw, "Book not found", http.StatusNotFound)
-// 		return
-// 	}
-// 	if err != nil {
-// 		http.Error(rw, "Book not found", http.StatusInternalServerError)
-// 		return
-// 	}
-// 	s.ErrLog.Println("Handle PUT Book", id)
-// }
+func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
+	id := HandleId(rw, r)
+	if id == -1 {
+		return
+	}
 
-// func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
-// 	id := HandleId(rw, r)
-//
-// 	err := s.Books.Delete(id)
-// 	if err == teal.ErrBookNotFound {
-// 		http.Error(rw, "Book not found", http.StatusNotFound)
-// 		return
-// 	}
-// 	if err != nil {
-// 		s.ErrLog.Println("Book not found")
-// 		http.Error(rw, "Book not found", http.StatusInternalServerError)
-// 		return
-// 	}
-// 	s.InfoLog.Println("Handle DELETE Book", id)
-// }
+	// marshal payload to struct
+	var book teal.Book
+	err := json.NewDecoder(r.Body).Decode(&book)
+	if err != nil {
+		response.Error(rw, r, err)
+		return
+	}
+
+	// validate payload
+	// PUT should require all fields
+	verrs := book.Validate()
+	if len(verrs) > 0 {
+		// log
+		response.ValidationError(rw, r, verrs)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	result, err := s.Books.Update(ctx, id, &book)
+	if err == teal.ErrDoesNotExist {
+		response.Error(rw, r, err)
+		return
+	}
+	if err != nil {
+		response.Error(rw, r, err)
+		return
+	}
+
+	body, err := util.ToJSON(result)
+	if err != nil {
+		s.ErrLog.Println(err)
+		response.Error(rw, r, err)
+		return
+	}
+
+	s.InfoLog.Printf("Book %v updated", result)
+	response.OK(rw, r, body)
+}
+
+func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
+	id := HandleId(rw, r)
+	if id == -1 {
+		return
+	}
+
+	err := s.Books.Delete(r.Context(), id)
+	if err == teal.ErrDoesNotExist {
+		http.Error(rw, "Book not found", http.StatusNotFound)
+		return
+	}
+
+	if err != nil {
+		s.ErrLog.Println(err)
+		response.Error(rw, r, err)
+		return
+	}
+
+	s.InfoLog.Printf("Book %d deleted", id)
+	response.OK(rw, r, nil)
+}
 
 func HandleId(rw http.ResponseWriter, r *http.Request) int {
 	vars := mux.Vars(r)
+
 	id, err := strconv.Atoi(vars["id"])
-	// TODO FIX!!
-	if id == 0 {
-		return 0
-	}
 	if err != nil {
-		response.Error(rw, r, fmt.Errorf("unable to process id"))
+		response.Error(rw, r, fmt.Errorf("unable to process id: %v", err))
 		return -1
 	}
+
 	return id
 }

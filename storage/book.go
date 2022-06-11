@@ -182,20 +182,14 @@ func (s *Store) CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error
 // Update book details.
 // For authors, a new author row is created for each new author
 // No authors are deleted, unless it has no relationship with any books
-func (s *Store) UpdateBook(ctx context.Context, id int, b *teal.Book) error {
+func (s *Store) UpdateBook(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
 	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
 
-		// TODO return updated book here
-		// so below steps can be removed
-		err := updateBook(tx, id, b)
+		book, err := updateBook(ctx, tx, id, b)
 		if err != nil {
 			return err
 		}
 
-		book, err := s.RetrieveBookWithID(id)
-		if err != nil {
-			return err
-		}
 		// if author is changed
 		if !reflect.DeepEqual(book.Author, b.Author) {
 
@@ -234,12 +228,21 @@ func (s *Store) UpdateBook(ctx context.Context, id int, b *teal.Book) error {
 				return err
 			}
 		}
+
+		// updated authors needs to be passed to the returned book
+		book.Author = b.Author
+		ctx = context.WithValue(ctx, bookCtxKey, book)
 		return nil
 
 	}, &sql.TxOptions{}); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+
+	book, ok := ctx.Value(bookCtxKey).(*teal.Book)
+	if !ok {
+		return nil, fmt.Errorf("db: failed to cast book")
+	}
+	return book, nil
 }
 
 func (s *Store) DeleteBook(ctx context.Context, id int) error {
@@ -300,7 +303,8 @@ func insertBook(ctx context.Context, tx *sqlx.Tx, b *teal.Book) (*teal.Book, err
 	return &book, nil
 }
 
-func updateBook(tx *sqlx.Tx, id int, b *teal.Book) error {
+func updateBook(ctx context.Context, tx *sqlx.Tx, id int, b *teal.Book) (*teal.Book, error) {
+	var book teal.Book
 
 	stmt := `UPDATE books
 			SET title=$1,
@@ -312,8 +316,8 @@ func updateBook(tx *sqlx.Tx, id int, b *teal.Book) error {
 			dateAdded=$7,
 			dateUpdated=$8,
 			dateCompleted=$9
-			WHERE id=$10;`
-	res, err := tx.Exec(stmt,
+			WHERE id=$10 RETURNING *;`
+	err := tx.QueryRowxContext(ctx, stmt,
 		b.Title,
 		b.Description,
 		b.ISBN,
@@ -323,21 +327,13 @@ func updateBook(tx *sqlx.Tx, id int, b *teal.Book) error {
 		b.DateAdded,
 		b.DateUpdated,
 		b.DateCompleted,
-		b.ID)
+		id).StructScan(&book)
 
 	if err != nil {
-		return fmt.Errorf("db: update book %d failed: %v", id, err)
+		return nil, fmt.Errorf("db: update book %d failed: %v", id, err)
 	}
 
-	count, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("db: update book %d failed: %v", id, err)
-	}
-
-	if count == 0 {
-		return errors.New("db: no books updated")
-	}
-	return nil
+	return &book, nil
 }
 
 // delete book entry from books table

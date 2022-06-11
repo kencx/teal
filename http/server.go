@@ -71,14 +71,10 @@ func (s *Server) RegisterRoutes() {
 
 	postRouter := s.Router.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/", s.AddBook)
-	// postRouter.HandleFunc("/{id:[0-9]+}/read", s.ReadBook)
-	// postRouter.HandleFunc("/{id:[0-9]+}/reading", s.ReadingBook)
-	// postRouter.HandleFunc("/{id:[0-9]+}/unread", s.UnreadBook)
-	// postRouter.Use(s.MiddlewareBookValidation)
 
-	// putRouter := s.Router.Methods(http.MethodPut).Subrouter()
-	// putRouter.HandleFunc("/{id:[0-9]+}", s.UpdateBook)
+	putRouter := s.Router.Methods(http.MethodPut).Subrouter()
+	putRouter.HandleFunc("/{id:[0-9]+}", s.UpdateBook)
 
-	// deleteRouter := s.Router.Methods(http.MethodDelete).Subrouter()
-	// deleteRouter.HandleFunc("/{id:[0-9]+}", s.DeleteBook)
+	deleteRouter := s.Router.Methods(http.MethodDelete).Subrouter()
+	deleteRouter.HandleFunc("/{id:[0-9]+}", s.DeleteBook)
 }
