@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"database/sql"
 	"reflect"
 	"testing"
 
@@ -32,10 +31,10 @@ func TestRetrieveAuthorWithName(t *testing.T) {
 func TestRetrieveAuthorNotExists(t *testing.T) {
 	result, err := db.RetrieveAuthorWithID(-1)
 	if err == nil {
-		t.Fatalf("expected error: sql.ErrNoRows")
+		t.Fatalf("expected error: ErrDoesNotExist")
 	}
 
-	if err != sql.ErrNoRows {
+	if err != teal.ErrDoesNotExist {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -58,6 +57,24 @@ func TestRetrieveAllAuthors(t *testing.T) {
 		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 }
+
+// TODO
+// func TestRetrieveAllAuthorEmpty(t *testing.T) {
+// 	// delete all entries
+// 	got, err := db.RetrieveAllAuthors()
+//
+// 	if err == nil {
+// 		t.Fatalf("expected error: ErrNoRows")
+// 	}
+//
+// 	if err != teal.ErrNoRows {
+// 		t.Fatalf("unexpected error: %v", err)
+// 	}
+//
+// 	if got != nil {
+// 		t.Fatalf("got %v, want nil", got)
+// 	}
+// }
 
 func TestCreateAuthor(t *testing.T) {
 

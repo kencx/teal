@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/kencx/teal"
-	"github.com/kencx/teal/json"
+	"github.com/kencx/teal/util"
 )
 
 type AuthorService interface {
@@ -23,7 +23,7 @@ func (s *Server) GetAllAuthors(rw http.ResponseWriter, r *http.Request) {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 	}
 
-	res, err := json.ToJSON(b)
+	res, err := util.ToJSON(b)
 	if err != nil {
 		s.ErrLog.Print(err)
 		http.Error(rw, err.Error(), http.StatusBadRequest)

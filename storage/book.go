@@ -41,7 +41,7 @@ func (s *Store) RetrieveBookWithID(id int) (*teal.Book, error) {
 
 	err = tx.QueryRowx(stmt, id).StructScan(&dest)
 	if err == sql.ErrNoRows {
-		return nil, err
+		return nil, teal.ErrDoesNotExist
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db: retrieve book id %d failed: %v", id, err)
@@ -68,7 +68,7 @@ func (s *Store) RetrieveBookWithISBN(isbn string) (*teal.Book, error) {
 
 	err = tx.QueryRowx(stmt, isbn).StructScan(&dest)
 	if err == sql.ErrNoRows {
-		return nil, err
+		return nil, teal.ErrDoesNotExist
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db: retrieve book isbn %q failed: %v", isbn, err)
@@ -95,7 +95,7 @@ func (s *Store) RetrieveBookWithTitle(title string) (*teal.Book, error) {
 
 	err = tx.QueryRowx(stmt, title).StructScan(&dest)
 	if err == sql.ErrNoRows {
-		return nil, err
+		return nil, teal.ErrDoesNotExist
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db: retrieve book title %q failed: %v", title, err)
@@ -117,15 +117,20 @@ func (s *Store) RetrieveAllBooks() ([]*teal.Book, error) {
 		FROM books b
 		INNER JOIN books_authors ba ON ba.book_id=b.id
 		INNER JOIN authors a ON ba.author_id=a.id
-		GROUP BY b.title
+		GROUP BY b.id
 		ORDER BY b.id;`
 
 	err = tx.Select(&dest, stmt)
-	if err == sql.ErrNoRows {
-		return nil, err
-	}
+	// sqlx Select does not seem to return sql.ErrNoRows
+	// related issue: https://github.com/jmoiron/sqlx/issues/762#issuecomment-1062649063
+	// if err == sql.ErrNoRows {
+	// 	return nil, err
+	// }
 	if err != nil {
 		return nil, fmt.Errorf("db: retrieve all books failed: %v", err)
+	}
+	if len(dest) == 0 {
+		return nil, teal.ErrNoRows
 	}
 
 	var books []*teal.Book
@@ -180,6 +185,8 @@ func (s *Store) CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error
 func (s *Store) UpdateBook(ctx context.Context, id int, b *teal.Book) error {
 	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
 
+		// TODO return updated book here
+		// so below steps can be removed
 		err := updateBook(tx, id, b)
 		if err != nil {
 			return err

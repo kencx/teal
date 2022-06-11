@@ -20,25 +20,6 @@ func parseAuthors(authors []string) []*teal.Author {
 	return result
 }
 
-func (s *Store) RetrieveAllAuthorNames() ([]string, error) {
-	tx, err := s.db.Beginx()
-	if err != nil {
-		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
-	}
-	defer endTx(tx, err)
-
-	var dest []string
-	stmt := `SELECT name FROM authors;`
-	err = tx.Select(&dest, stmt)
-	if err == sql.ErrNoRows {
-		return nil, err
-	}
-	if err != nil {
-		return nil, fmt.Errorf("db: retrieve all authors names failed: %v", err)
-	}
-	return dest, nil
-}
-
 func (s *Store) RetrieveAuthorWithID(id int) (*teal.Author, error) {
 	tx, err := s.db.Beginx()
 	if err != nil {
@@ -50,7 +31,7 @@ func (s *Store) RetrieveAuthorWithID(id int) (*teal.Author, error) {
 	stmt := `SELECT * FROM authors WHERE id=$1;`
 	err = tx.QueryRowx(stmt, id).StructScan(&dest)
 	if err == sql.ErrNoRows {
-		return nil, err
+		return nil, teal.ErrDoesNotExist
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db: retrieve author %d failed: %v", id, err)
@@ -69,7 +50,7 @@ func (s *Store) RetrieveAuthorWithName(name string) (*teal.Author, error) {
 	stmt := `SELECT * FROM authors WHERE name=$1;`
 	err = tx.QueryRowx(stmt, name).StructScan(&dest)
 	if err == sql.ErrNoRows {
-		return nil, err
+		return nil, teal.ErrDoesNotExist
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db: retrieve author %q failed: %v", name, err)
@@ -88,7 +69,7 @@ func (s *Store) RetrieveAllAuthors() ([]*teal.Author, error) {
 	stmt := `SELECT * FROM authors;`
 	err = tx.Select(&dest, stmt)
 	if err == sql.ErrNoRows {
-		return nil, err
+		return nil, teal.ErrNoRows
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db: retrieve all authors failed: %v", err)
@@ -96,6 +77,26 @@ func (s *Store) RetrieveAllAuthors() ([]*teal.Author, error) {
 	return dest, nil
 }
 
+func (s *Store) RetrieveAllAuthorNames() ([]string, error) {
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
+	}
+	defer endTx(tx, err)
+
+	var dest []string
+	stmt := `SELECT name FROM authors;`
+	err = tx.Select(&dest, stmt)
+	if err == sql.ErrNoRows {
+		return nil, teal.ErrNoRows
+	}
+	if err != nil {
+		return nil, fmt.Errorf("db: retrieve all authors names failed: %v", err)
+	}
+	return dest, nil
+}
+
+// TODO return Author
 func (s *Store) CreateAuthor(ctx context.Context, a *teal.Author) error {
 	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
 

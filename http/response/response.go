@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/kencx/teal"
-	"github.com/kencx/teal/json"
+	"github.com/kencx/teal/util"
 )
 
 var contentType = "application/json"
@@ -54,6 +54,19 @@ func Created(rw http.ResponseWriter, r *http.Request, body []byte) {
 	res.Write()
 }
 
+func NotFound(rw http.ResponseWriter, r *http.Request, err error) {
+	res := New(rw, r)
+	res.statusCode = http.StatusNotFound
+	res.body, err = util.ToJSON(&ErrorResponse{
+		Err: err.Error(),
+	})
+	if err != nil {
+		// TODO log marshal error
+		res.body = []byte("")
+	}
+	res.Write()
+}
+
 func Error(rw http.ResponseWriter, r *http.Request, err error) {
 	if err == nil {
 		return
@@ -62,7 +75,7 @@ func Error(rw http.ResponseWriter, r *http.Request, err error) {
 	res := New(rw, r)
 	res.statusCode = http.StatusBadRequest
 
-	res.body, err = json.ToJSON(&ErrorResponse{
+	res.body, err = util.ToJSON(&ErrorResponse{
 		Err: err.Error(),
 	})
 	if err != nil {
@@ -77,7 +90,7 @@ func ValidationError(rw http.ResponseWriter, r *http.Request, verrs []*teal.Vali
 	res.statusCode = http.StatusBadRequest
 
 	var err error
-	res.body, err = json.ToJSON(&ValidationErrResponse{
+	res.body, err = util.ToJSON(&ValidationErrResponse{
 		Err: verrs,
 	})
 	if err != nil {

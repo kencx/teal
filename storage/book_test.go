@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"reflect"
 	"sort"
@@ -43,17 +42,17 @@ func TestRetrieveBookWithTitle(t *testing.T) {
 }
 
 func TestRetrieveBookNotExists(t *testing.T) {
-	result, err := db.RetrieveBookWithID(-1)
+	got, err := db.RetrieveBookWithID(-1)
 	if err == nil {
-		t.Fatalf("expected error: sql.ErrNoRows")
+		t.Fatalf("expected error: ErrDoesNotExist")
 	}
 
-	if err != sql.ErrNoRows {
+	if err != teal.ErrDoesNotExist {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if result != nil {
-		t.Fatalf("got %v, want nil", result)
+	if got != nil {
+		t.Fatalf("got %v, want nil", got)
 	}
 }
 
@@ -77,6 +76,24 @@ func TestRetrieveAllBooks(t *testing.T) {
 		}
 	}
 }
+
+// TODO
+// func TestRetrieveAllBooksEmpty(t *testing.T) {
+// 	// delete all entries
+// 	got, err := db.RetrieveAllBooks()
+//
+// 	if err == nil {
+// 		t.Fatalf("expected error: ErrNoRows")
+// 	}
+//
+// 	if err != teal.ErrNoRows {
+// 		t.Fatalf("unexpected error: %v", err)
+// 	}
+//
+// 	if got != nil {
+// 		t.Fatalf("got %v, want nil", got)
+// 	}
+// }
 
 func TestCreateBook(t *testing.T) {
 	tests := []struct {
@@ -203,7 +220,7 @@ func TestUpdateBookNoAuthorChange(t *testing.T) {
 	want.Rating = 1
 	want.State = "unread"
 
-	err := db.UpdateBook(want.ID, want)
+	err := db.UpdateBook(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	got, err := db.RetrieveBookWithID(want.ID)
@@ -220,7 +237,7 @@ func TestUpdateBookAddNewAuthor(t *testing.T) {
 	want := testBook1
 	want.Author = []string{"S.A. Corey", "Ty Franck"}
 
-	err := db.UpdateBook(want.ID, want)
+	err := db.UpdateBook(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	got, err := db.RetrieveBookWithID(want.ID)
@@ -239,7 +256,7 @@ func TestUpdateBookAddExistingAuthor(t *testing.T) {
 	want := testBook1
 	want.Author = []string{"S.A. Corey", "John Doe"}
 
-	err := db.UpdateBook(want.ID, want)
+	err := db.UpdateBook(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	got, err := db.RetrieveBookWithID(want.ID)
@@ -258,7 +275,7 @@ func TestUpdateBookRemoveAuthor(t *testing.T) {
 	want := testBook3
 	want.Author = []string{"Regina Phallange", "Ken Adams"}
 
-	err := db.UpdateBook(want.ID, want)
+	err := db.UpdateBook(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	got, err := db.RetrieveBookWithID(want.ID)
@@ -281,7 +298,7 @@ func TestUpdateBookRemoveAuthorCompletely(t *testing.T) {
 	want := testBook3
 	want.Author = []string{"John Doe", "Regina Phallange"}
 
-	err := db.UpdateBook(want.ID, want)
+	err := db.UpdateBook(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	got, err := db.RetrieveBookWithID(want.ID)
@@ -306,7 +323,7 @@ func TestUpdateBookRenameAuthor(t *testing.T) {
 	want := testBook4
 	want.Author = []string{"John Adams"}
 
-	err := db.UpdateBook(want.ID, want)
+	err := db.UpdateBook(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	got, err := db.RetrieveBookWithID(want.ID)
@@ -329,23 +346,23 @@ func TestUpdateBookRenameAuthor(t *testing.T) {
 
 func TestUpdateBookNotExists(t *testing.T) {
 	b := &teal.Book{}
-	err := db.UpdateBook(-1, b)
+	err := db.UpdateBook(context.Background(), -1, b)
 	if err == nil {
-		t.Fatalf("expected error: book not exists")
+		t.Fatalf("expected error: no books updated")
 	}
 }
 
 func TestUpdateBookISBNConstraint(t *testing.T) {
 	want := testBook1
 	want.ISBN = testBook2.ISBN
-	err := db.UpdateBook(want.ID, want)
+	err := db.UpdateBook(context.Background(), want.ID, want)
 	if err == nil {
 		t.Errorf("expected error: unique constraint ISBN")
 	}
 }
 
 func TestDeleteBook(t *testing.T) {
-	err := db.DeleteBook(testBook1.ID)
+	err := db.DeleteBook(context.Background(), testBook1.ID)
 	checkErr(t, err)
 
 	_, err = db.RetrieveBookWithID(testBook1.ID)
@@ -379,7 +396,7 @@ func TestDeleteBook(t *testing.T) {
 
 func TestDeleteBookEnsureAuthorRemainsForExistingBooks(t *testing.T) {
 	initTestDB(db) // reset db
-	err := db.DeleteBook(testBook3.ID)
+	err := db.DeleteBook(context.Background(), testBook3.ID)
 	checkErr(t, err)
 
 	// check author still exists in authors table
@@ -417,7 +434,7 @@ func TestDeleteBookEnsureAuthorRemainsForExistingBooks(t *testing.T) {
 }
 
 func TestDeleteBookNotExists(t *testing.T) {
-	err := db.DeleteBook(-1)
+	err := db.DeleteBook(context.Background(), -1)
 	if err == nil {
 		t.Fatalf("expected error: book not exists")
 	}

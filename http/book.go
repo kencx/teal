@@ -2,9 +2,8 @@ package http
 
 import (
 	"context"
-	"database/sql"
+	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -12,10 +11,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/kencx/teal"
 	"github.com/kencx/teal/http/response"
-	"github.com/kencx/teal/json"
+	"github.com/kencx/teal/util"
 )
-
-type KeyBook struct{}
 
 type BookService interface {
 	Get(id int) (*teal.Book, error)
@@ -28,20 +25,19 @@ type BookService interface {
 
 func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 	id := HandleId(rw, r)
-
 	b, err := s.Books.Get(id)
-	if err == sql.ErrNoRows {
-		s.InfoLog.Printf("No book %d found", id)
-		response.NoContent(rw, r)
-		return
-	}
 
-	if err != nil {
+	if err == teal.ErrDoesNotExist {
+		s.InfoLog.Printf("Book %d not found", id)
+		response.NotFound(rw, r, err)
+		return
+
+	} else if err != nil {
 		response.Error(rw, r, err)
 		return
 	}
 
-	res, err := json.ToJSON(b)
+	res, err := util.ToJSON(b)
 	if err != nil {
 		response.Error(rw, r, err)
 		return
@@ -53,12 +49,18 @@ func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 
 func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
 	b, err := s.Books.GetAll()
-	if err != nil {
+
+	if err == teal.ErrNoRows {
+		s.InfoLog.Println("No books found")
+		response.NoContent(rw, r)
+		return
+
+	} else if err != nil {
 		response.Error(rw, r, err)
 		return
 	}
 
-	res, err := json.ToJSON(b)
+	res, err := util.ToJSON(b)
 	if err != nil {
 		response.Error(rw, r, err)
 		return
@@ -69,7 +71,23 @@ func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
-	book := r.Context().Value(KeyBook{}).(teal.Book)
+
+	// marshal payload to struct
+	var book teal.Book
+	err := json.NewDecoder(r.Body).Decode(&book)
+	if err != nil {
+		response.Error(rw, r, err)
+		return
+	}
+
+	// validate payload
+	verrs := book.Validate()
+	if len(verrs) > 0 {
+		// log
+		response.ValidationError(rw, r, verrs)
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
@@ -80,7 +98,7 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := json.ToJSON(result)
+	body, err := util.ToJSON(result)
 	if err != nil {
 		s.ErrLog.Print(err)
 		response.Error(rw, r, err)
@@ -134,36 +152,4 @@ func HandleId(rw http.ResponseWriter, r *http.Request) int {
 		return -1
 	}
 	return id
-}
-
-func (s Server) MiddlewareBookValidation(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		book := teal.Book{}
-
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			response.Error(rw, r, err)
-			return
-		}
-		err = json.FromJSON(body, &book)
-		if err != nil {
-			response.Error(rw, r, err)
-			return
-		}
-
-		// TODO should this be in middleware or service layer?
-		verrs := book.Validate()
-		if len(verrs) > 0 {
-			// s.ErrLog.Println(verrs)
-			response.ValidationError(rw, r, verrs)
-			return
-		}
-
-		// add book to context
-		ctx := context.WithValue(r.Context(), KeyBook{}, book)
-		r = r.WithContext(ctx)
-
-		// call next handler
-		next.ServeHTTP(rw, r)
-	})
 }

@@ -1,101 +1,186 @@
 package http
 
 import (
-	"io/ioutil"
+	"bytes"
+	"context"
+	"encoding/json"
+	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/kencx/teal"
+	"github.com/kencx/teal/http/response"
+	"github.com/kencx/teal/util"
 )
 
-type mockBookService struct {
-	getAllBooksFn    func() ([]*teal.Book, error)
-	getBookFn        func(id int) (*teal.Book, error)
-	getBookByTitleFn func(title string) (*teal.Book, error)
-	createBookFn     func(b *teal.Book) (int, error)
-	updateBookFn     func(id int, b *teal.Book) error
-	deleteBookFn     func(id int) error
-}
+var (
+	testBook1 = &teal.Book{
+		Title:  "FooBar",
+		Author: []string{"John Doe"},
+		ISBN:   "100",
+	}
+	testBook2 = &teal.Book{
+		Title:  "FooBar",
+		Author: []string{"John Doe"},
+		ISBN:   "101",
+	}
+	testBook3 = &teal.Book{
+		Title:  "FooBar",
+		Author: []string{"John Doe"},
+		ISBN:   "102",
+	}
+	testBooks = []*teal.Book{testBook1, testBook2, testBook3}
+)
 
-func (m *mockBookService) GetAll() ([]*teal.Book, error) {
-	return m.getAllBooksFn()
-}
+func TestGetBook(t *testing.T) {
+	s := Server{
+		// TODO mock loggers
+		InfoLog: log.New(os.Stdout, "", log.LstdFlags),
+		ErrLog:  log.New(os.Stdout, "", log.LstdFlags),
+		Books: &mockBookService{
+			getBookFn: func(id int) (*teal.Book, error) {
+				return testBook1, nil
+			},
+		},
+	}
 
-func (m *mockBookService) Get(id int) (*teal.Book, error) {
-	return m.getBookFn(id)
-}
+	w, err := getResponse("/1", s.GetBook)
+	checkErr(t, err)
 
-func (m *mockBookService) GetByTitle(title string) (*teal.Book, error) {
-	return m.getBookByTitleFn(title)
-}
+	var got teal.Book
+	err = json.NewDecoder(w.Body).Decode(&got)
+	checkErr(t, err)
 
-func (m *mockBookService) Create(b *teal.Book) (int, error) {
-	return m.createBookFn(b)
-}
-
-func (m *mockBookService) Update(id int, b *teal.Book) error {
-	return m.updateBookFn(id, b)
-}
-
-func (m *mockBookService) Delete(id int) error {
-	return m.deleteBookFn(id)
+	assertEqual(t, got.Title, testBook1.Title)
+	assertEqual(t, got.Author[0], testBook1.Author[0])
+	assertEqual(t, got.ISBN, testBook1.ISBN)
+	assertEqual(t, w.Code, http.StatusOK)
+	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
 }
 
 func TestGetAllBooks(t *testing.T) {
-	expected := []*teal.Book{{Title: "FooBar", Author: "John Doe", ISBN: "52634"}}
-	s := Server{Books: &mockBookService{
-		getAllBooksFn: func() ([]*teal.Book, error) {
-			return expected, nil
+	s := Server{
+		InfoLog: log.New(os.Stdout, "", log.LstdFlags),
+		ErrLog:  log.New(os.Stdout, "", log.LstdFlags),
+		Books: &mockBookService{
+			getAllBooksFn: func() ([]*teal.Book, error) {
+				return testBooks, nil
+			},
 		},
-	}}
+	}
 
-	body, code, header := getResponse(t, http.MethodGet, "/", s.GetAllBooks)
-	result := []teal.Book{}
-	err := FromJSON(body, &result)
+	w, err := getResponse("/", s.GetAllBooks)
 	checkErr(t, err)
 
-	assertEqual(t, result[0].Title, expected[0].Title)
-	assertEqual(t, code, http.StatusOK)
-	assertEqual(t, header.Get("Content-Type"), "application/json")
-}
-
-func TestGetBook(t *testing.T) {
-	expected := &teal.Book{Title: "FooBar", Author: "John Doe", ISBN: "52634"}
-	s := Server{Books: &mockBookService{
-		getBookFn: func(id int) (*teal.Book, error) {
-			return expected, nil
-		},
-	}}
-
-	body, code, header := getResponse(t, http.MethodGet, "/1", s.GetBook)
-	want, err := ToJSON(expected)
+	var got []teal.Book
+	err = json.NewDecoder(w.Body).Decode(&got)
 	checkErr(t, err)
 
-	assertEqual(t, string(body), string(want))
-	assertEqual(t, code, http.StatusOK)
-	assertEqual(t, header.Get("Content-Type"), "application/json")
+	for i, v := range got {
+		assertEqual(t, v.Title, testBooks[i].Title)
+		assertEqual(t, v.Author[0], testBooks[i].Author[0])
+		assertEqual(t, v.ISBN, testBooks[i].ISBN)
+	}
+	assertEqual(t, w.Code, http.StatusOK)
+	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
 }
 
-func getResponse(t *testing.T, method, url string, f func(rw http.ResponseWriter, r *http.Request)) ([]byte, int, http.Header) {
-	t.Helper()
+func TestAddBook(t *testing.T) {
+	want, err := util.ToJSON(testBook1)
+	checkErr(t, err)
 
+	s := Server{
+		InfoLog: log.New(os.Stdout, "", log.LstdFlags),
+		ErrLog:  log.New(os.Stdout, "", log.LstdFlags),
+		Books: &mockBookService{
+			createBookFn: func(ctx context.Context, b *teal.Book) (*teal.Book, error) {
+				return testBook1, nil
+			},
+		}}
+
+	w, err := postResponse("/", bytes.NewReader(want), s.AddBook)
+	checkErr(t, err)
+
+	var got teal.Book
+	err = json.NewDecoder(w.Body).Decode(&got)
+	checkErr(t, err)
+
+	assertEqual(t, got.Title, testBook1.Title)
+	assertEqual(t, got.Author[0], testBook1.Author[0])
+	assertEqual(t, got.ISBN, testBook1.ISBN)
+	assertEqual(t, w.Code, http.StatusCreated)
+	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
+}
+
+func TestAddBookFailValidation(t *testing.T) {
+	failBook := &teal.Book{
+		Title:  "",
+		Author: []string{"John Doe"},
+		ISBN:   "12345",
+	}
+	want, err := util.ToJSON(failBook)
+	checkErr(t, err)
+
+	s := Server{
+		InfoLog: log.New(os.Stdout, "", log.LstdFlags),
+		ErrLog:  log.New(os.Stdout, "", log.LstdFlags),
+		Books: &mockBookService{
+			createBookFn: func(ctx context.Context, b *teal.Book) (*teal.Book, error) {
+				return failBook, nil
+			},
+		}}
+
+	w, err := postResponse("/", bytes.NewBuffer(want), s.AddBook)
+	checkErr(t, err)
+
+	// get response
+	var body response.ValidationErrResponse
+	err = json.NewDecoder(w.Body).Decode(&body)
+	checkErr(t, err)
+
+	assertEqual(t, w.Code, http.StatusBadRequest)
+	for _, v := range body.Err {
+		log.Println(v.Message)
+		strings.Contains(v.Message, "title")
+	}
+}
+
+func getResponse(url string, f func(http.ResponseWriter, *http.Request)) (*httptest.ResponseRecorder, error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
 	w := httptest.NewRecorder()
-	req, err := http.NewRequest(method, url, nil)
-	checkErr(t, err)
 
 	http.HandlerFunc(f).ServeHTTP(w, req)
-	res := w.Result()
-	defer res.Body.Close()
+	return w, nil
+}
 
-	body, err := ioutil.ReadAll(res.Body)
-	checkErr(t, err)
+func postResponse(url string, data io.Reader, f func(http.ResponseWriter, *http.Request)) (*httptest.ResponseRecorder, error) {
 
-	return body, res.StatusCode, res.Header
+	req, err := http.NewRequest(http.MethodPost, url, data)
+	if err != nil {
+		return nil, err
+	}
+	w := httptest.NewRecorder()
+
+	http.HandlerFunc(f).ServeHTTP(w, req)
+	return w, nil
 }
 
 func assertEqual[T comparable](t *testing.T, got, want T) {
 	if got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func assertObjectEqual(t *testing.T, got, want interface{}) {
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
