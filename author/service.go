@@ -1,6 +1,7 @@
 package author
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/kencx/teal"
@@ -9,9 +10,9 @@ import (
 type Store interface {
 	RetrieveAuthorWithID(id int) (*teal.Author, error)
 	RetrieveAllAuthors() ([]*teal.Author, error)
-	CreateAuthor(b *teal.Author) error
+	CreateAuthor(ctx context.Context, b *teal.Author) error
 	// UpdateAuthor(id int, b *teal.Author) error
-	DeleteAuthor(id int) error
+	DeleteAuthor(ctx context.Context, id int) error
 }
 
 type Service struct {
@@ -46,10 +47,10 @@ func (s *Service) GetAll() ([]*teal.Author, error) {
 	return b, nil
 }
 
-func (s *Service) Create(b *teal.Author) (int, error) {
+func (s *Service) Create(ctx context.Context, b *teal.Author) (int, error) {
 	// validate b
 
-	err := s.db.CreateAuthor(b)
+	err := s.db.CreateAuthor(ctx, b)
 	if err != nil {
 		return -1, err
 	}
@@ -57,12 +58,12 @@ func (s *Service) Create(b *teal.Author) (int, error) {
 	return 0, nil
 }
 
-func (s *Service) Delete(id int) error {
+func (s *Service) Delete(ctx context.Context, id int) error {
 	if id <= 0 {
 		return fmt.Errorf("svc: invalid id %d", id)
 	}
 
-	err := s.db.DeleteAuthor(id)
+	err := s.db.DeleteAuthor(ctx, id)
 	if err != nil {
 		return err
 	}

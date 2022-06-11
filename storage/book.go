@@ -12,7 +12,12 @@ import (
 	"github.com/kencx/teal"
 )
 
-type contextKey string
+type baseKey int
+
+const (
+	bookCtxKey baseKey = iota
+	authorCtxKey
+)
 
 type BookAuthorDest struct {
 	*teal.Book
@@ -133,13 +138,13 @@ func (s *Store) RetrieveAllBooks() ([]*teal.Book, error) {
 
 // Create book entry in books, author entries in authors
 func (s *Store) CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error) {
-	if err := s.Tx(func(tx *sqlx.Tx) error {
+	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
 
-		book, err := insertBook(tx, b)
+		book, err := insertBook(ctx, tx, b)
 		if err != nil {
 			return err
 		}
-		ctx = context.WithValue(ctx, contextKey("book_id"), book)
+		ctx = context.WithValue(ctx, bookCtxKey, book)
 
 		// create authors
 		authors := parseAuthors(b.Author)
@@ -161,7 +166,8 @@ func (s *Store) CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error
 		return nil, err
 	}
 
-	book, ok := ctx.Value(contextKey("book_id")).(*teal.Book)
+	// TODO implement separate context package with type safe getters and setters
+	book, ok := ctx.Value(bookCtxKey).(*teal.Book)
 	if !ok {
 		return nil, fmt.Errorf("db: failed to cast book")
 	}
@@ -171,8 +177,8 @@ func (s *Store) CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error
 // Update book details.
 // For authors, a new author row is created for each new author
 // No authors are deleted, unless it has no relationship with any books
-func (s *Store) UpdateBook(id int, b *teal.Book) error {
-	if err := s.Tx(func(tx *sqlx.Tx) error {
+func (s *Store) UpdateBook(ctx context.Context, id int, b *teal.Book) error {
+	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
 
 		err := updateBook(tx, id, b)
 		if err != nil {
@@ -229,8 +235,8 @@ func (s *Store) UpdateBook(id int, b *teal.Book) error {
 	return nil
 }
 
-func (s *Store) DeleteBook(id int) error {
-	if err := s.Tx(func(tx *sqlx.Tx) error {
+func (s *Store) DeleteBook(ctx context.Context, id int) error {
+	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
 
 		err := deleteBook(tx, id)
 		if err != nil {
@@ -263,13 +269,13 @@ func (s *Store) DeleteBook(id int) error {
 }
 
 // insert book entry to books table
-func insertBook(tx *sqlx.Tx, b *teal.Book) (*teal.Book, error) {
+func insertBook(ctx context.Context, tx *sqlx.Tx, b *teal.Book) (*teal.Book, error) {
 	var book teal.Book
 
 	stmt := `INSERT INTO books
 		(title, description, isbn, numOfPages, rating, state, dateAdded, dateUpdated, dateCompleted)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *;`
-	err := tx.QueryRowx(stmt,
+	err := tx.QueryRowxContext(ctx, stmt,
 		b.Title,
 		b.Description,
 		b.ISBN,
@@ -346,8 +352,8 @@ func deleteBook(tx *sqlx.Tx, id int) error {
 }
 
 // functional Tx helper for Exec statements
-func (s *Store) Tx(fn func(tx *sqlx.Tx) error, opts *sql.TxOptions) error {
-	tx, err := s.db.Beginx()
+func (s *Store) Tx(ctx context.Context, fn func(tx *sqlx.Tx) error, opts *sql.TxOptions) error {
+	tx, err := s.db.BeginTxx(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("db: failed to start transaction: %v", err)
 	}

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/kencx/teal"
@@ -22,7 +23,7 @@ type BookService interface {
 	GetAll() ([]*teal.Book, error)
 	Create(ctx context.Context, b *teal.Book) (*teal.Book, error)
 	// Update(id int, b *teal.Book) error
-	Delete(id int) error
+	Delete(ctx context.Context, id int) error
 }
 
 func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
@@ -69,8 +70,10 @@ func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
 
 func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 	book := r.Context().Value(KeyBook{}).(teal.Book)
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
 
-	result, err := s.Books.Create(r.Context(), &book)
+	result, err := s.Books.Create(ctx, &book)
 	if err != nil {
 		s.ErrLog.Print(err)
 		response.Error(rw, r, err)
@@ -149,10 +152,10 @@ func (s Server) MiddlewareBookValidation(next http.Handler) http.Handler {
 		}
 
 		// TODO should this be in middleware or service layer?
-		err = book.Validate()
-		if err != nil {
-			s.ErrLog.Printf("validating book failed: %v", err)
-			response.Error(rw, r, fmt.Errorf("validation for book failed: %v", err))
+		verrs := book.Validate()
+		if len(verrs) > 0 {
+			// s.ErrLog.Println(verrs)
+			response.ValidationError(rw, r, verrs)
 			return
 		}
 

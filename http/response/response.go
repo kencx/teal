@@ -3,6 +3,7 @@ package response
 import (
 	"net/http"
 
+	"github.com/kencx/teal"
 	"github.com/kencx/teal/json"
 )
 
@@ -18,6 +19,10 @@ type Response struct {
 
 type ErrorResponse struct {
 	Err string `json:"error"`
+}
+
+type ValidationErrResponse struct {
+	Err []*teal.ValidationError `json:"errors"`
 }
 
 func New(rw http.ResponseWriter, r *http.Request) *Response {
@@ -50,15 +55,32 @@ func Created(rw http.ResponseWriter, r *http.Request, body []byte) {
 }
 
 func Error(rw http.ResponseWriter, r *http.Request, err error) {
+	if err == nil {
+		return
+	}
+
 	res := New(rw, r)
 	res.statusCode = http.StatusBadRequest
 
-	//
 	res.body, err = json.ToJSON(&ErrorResponse{
 		Err: err.Error(),
 	})
 	if err != nil {
-		// TODO log error
+		// TODO log marshal error
+		res.body = []byte("")
+	}
+	res.Write()
+}
+
+func ValidationError(rw http.ResponseWriter, r *http.Request, verrs []*teal.ValidationError) {
+	res := New(rw, r)
+	res.statusCode = http.StatusBadRequest
+
+	var err error
+	res.body, err = json.ToJSON(&ValidationErrResponse{
+		Err: verrs,
+	})
+	if err != nil {
 		res.body = []byte("")
 	}
 	res.Write()

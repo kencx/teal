@@ -12,8 +12,8 @@ type Store interface {
 	RetrieveBookWithTitle(title string) (*teal.Book, error)
 	RetrieveAllBooks() ([]*teal.Book, error)
 	CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error)
-	UpdateBook(id int, b *teal.Book) error
-	DeleteBook(id int) error
+	UpdateBook(ctx context.Context, id int, b *teal.Book) error
+	DeleteBook(ctx context.Context, id int) error
 }
 
 type Service struct {
@@ -70,12 +70,12 @@ func (s *Service) Create(ctx context.Context, b *teal.Book) (*teal.Book, error) 
 	return book, nil
 }
 
-func (s *Service) Delete(id int) error {
+func (s *Service) Delete(ctx context.Context, id int) error {
 	if id <= 0 {
 		return fmt.Errorf("svc: invalid id %d", id)
 	}
 
-	err := s.db.DeleteBook(id)
+	err := s.db.DeleteBook(ctx, id)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"reflect"
 	"testing"
@@ -62,7 +63,7 @@ func TestCreateAuthor(t *testing.T) {
 
 	want := &teal.Author{Name: "FooBar"}
 
-	err := db.CreateAuthor(want)
+	err := db.CreateAuthor(context.Background(), want)
 	checkErr(t, err)
 
 	got, err := db.RetrieveAuthorWithName(want.Name)
@@ -104,7 +105,7 @@ func TestUpdateAuthor(t *testing.T) {
 	want := testAuthor1
 	want.Name = "John Watson"
 
-	err := db.UpdateAuthor(want.ID, want)
+	err := db.UpdateAuthor(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	got, err := db.RetrieveAuthorWithID(want.ID)
@@ -120,7 +121,7 @@ func TestUpdateAuthorExisting(t *testing.T) {
 	want := testAuthor1
 	want.Name = "John Doe"
 
-	err := db.UpdateAuthor(want.ID, want)
+	err := db.UpdateAuthor(context.Background(), want.ID, want)
 	if err == nil {
 		t.Errorf("expected error: unique constraint Name")
 	}
@@ -128,7 +129,7 @@ func TestUpdateAuthorExisting(t *testing.T) {
 
 func TestDeleteAuthor(t *testing.T) {
 
-	err := db.DeleteAuthor(testAuthor1.ID)
+	err := db.DeleteAuthor(context.Background(), testAuthor1.ID)
 	checkErr(t, err)
 
 	_, err = db.RetrieveAuthorWithID(testAuthor1.ID)
@@ -155,7 +156,7 @@ func TestDeleteAuthor(t *testing.T) {
 }
 
 func TestDeleteAuthorNotExists(t *testing.T) {
-	err := db.DeleteAuthor(testAuthor1.ID)
+	err := db.DeleteAuthor(context.Background(), testAuthor1.ID)
 	if err == nil {
 		t.Errorf("expected error: author not exists")
 	}

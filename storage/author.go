@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -95,8 +96,8 @@ func (s *Store) RetrieveAllAuthors() ([]*teal.Author, error) {
 	return dest, nil
 }
 
-func (s *Store) CreateAuthor(a *teal.Author) error {
-	if err := s.Tx(func(tx *sqlx.Tx) error {
+func (s *Store) CreateAuthor(ctx context.Context, a *teal.Author) error {
+	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
 
 		_, err := insertOrGetAuthor(tx, a)
 		if err != nil {
@@ -110,8 +111,8 @@ func (s *Store) CreateAuthor(a *teal.Author) error {
 	return nil
 }
 
-func (s *Store) UpdateAuthor(id int, a *teal.Author) error {
-	if err := s.Tx(func(tx *sqlx.Tx) error {
+func (s *Store) UpdateAuthor(ctx context.Context, id int, a *teal.Author) error {
+	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
 
 		err := updateAuthor(tx, id, a)
 		if err != nil {
@@ -125,8 +126,8 @@ func (s *Store) UpdateAuthor(id int, a *teal.Author) error {
 	return nil
 }
 
-func (s *Store) DeleteAuthor(id int) error {
-	if err := s.Tx(func(tx *sqlx.Tx) error {
+func (s *Store) DeleteAuthor(ctx context.Context, id int) error {
+	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
 
 		err := deleteAuthor(tx, id)
 		if err != nil {

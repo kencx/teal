@@ -2,18 +2,15 @@ package teal
 
 import (
 	"database/sql"
-	"fmt"
 	"regexp"
-
-	"github.com/go-playground/validator/v10"
 )
 
 type Book struct {
 	ID            int            `json:"id" db:"id"`
-	Title         string         `json:"title" validate:"required" db:"title"`
+	Title         string         `json:"title" db:"title"`
 	Description   sql.NullString `json:"description,omitempty" db:"description"`
-	Author        []string       `json:"author" validate:"required"`
-	ISBN          string         `json:"isbn" validate:"required,isbn" db:"isbn"`
+	Author        []string       `json:"author"`
+	ISBN          string         `json:"isbn" db:"isbn"`
 	NumOfPages    int            `json:"num_of_pages" db:"numOfPages"`
 	Rating        int            `json:"rating" db:"rating"`
 	State         string         `json:"state" db:"state"` // default empty
@@ -27,16 +24,43 @@ type Book struct {
 // 		b.ID, b.Title, b.Description, b.Author, b.ISBN, b.DateAdded, b.DateUpdated, b.DateCompleted)
 // }
 
-var ErrBookNotFound = fmt.Errorf("Book not found")
+func (b *Book) Validate() []*ValidationError {
+	var verrs []*ValidationError
 
-func (b *Book) Validate() error {
-	validate := validator.New()
-	validate.RegisterValidation("isbn", validateISBN)
-	return validate.Struct(b)
+	if b.Title == "" {
+		verrs = append(verrs, NewValidationError("title", "value is missing"))
+	}
+	if verr := validateAuthor(b.Author); verr != nil {
+		verrs = append(verrs, verr)
+	}
+	if verr := validateISBN(b.ISBN); verr != nil {
+		verrs = append(verrs, verr)
+	}
+	return verrs
 }
 
-func validateISBN(fl validator.FieldLevel) bool {
+func validateAuthor(authors []string) *ValidationError {
+	if len(authors) == 0 {
+		return NewValidationError("author", "value is missing")
+	}
+
+	if len(authors) == 1 && authors[0] == "" {
+		return NewValidationError("author", "value is missing")
+	}
+
+	return nil
+}
+
+func validateISBN(isbn string) *ValidationError {
+	if isbn == "" {
+		return NewValidationError("isbn", "value is missing")
+	}
+
+	// TODO isbn regex
 	re := regexp.MustCompile(`[0-9]+`)
-	matches := re.FindAllString(fl.Field().String(), -1)
-	return len(matches) == 1
+	matches := re.FindAllString(isbn, -1)
+	if len(matches) != 1 {
+		return NewValidationError("isbn", "incorrect format")
+	}
+	return nil
 }

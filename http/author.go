@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/kencx/teal"
@@ -10,9 +11,9 @@ import (
 type AuthorService interface {
 	Get(id int) (*teal.Author, error)
 	GetAll() ([]*teal.Author, error)
-	Create(b *teal.Author) (int, error)
+	Create(ctx context.Context, b *teal.Author) (int, error)
 	// Update(id int, b *teal.Author) error
-	Delete(id int) error
+	Delete(ctx context.Context, id int) error
 }
 
 func (s *Server) GetAllAuthors(rw http.ResponseWriter, r *http.Request) {
