@@ -6,7 +6,7 @@ import (
 	"github.com/kencx/teal"
 )
 
-type mockBookService struct {
+type mockStore struct {
 	getAllBooksFn    func() ([]*teal.Book, error)
 	getBookFn        func(id int) (*teal.Book, error)
 	getBookByTitleFn func(title string) (*teal.Book, error)
@@ -15,26 +15,50 @@ type mockBookService struct {
 	deleteBookFn     func(ctx context.Context, id int) error
 }
 
-func (m *mockBookService) GetAll() ([]*teal.Book, error) {
+func (m *mockStore) RetrieveAllBooks() ([]*teal.Book, error) {
 	return m.getAllBooksFn()
 }
 
-func (m *mockBookService) Get(id int) (*teal.Book, error) {
+func (m *mockStore) RetrieveBookWithID(id int) (*teal.Book, error) {
 	return m.getBookFn(id)
 }
 
-func (m *mockBookService) GetByTitle(title string) (*teal.Book, error) {
+func (m *mockStore) RetrieveBookWithTitle(title string) (*teal.Book, error) {
 	return m.getBookByTitleFn(title)
 }
 
-func (m *mockBookService) Create(ctx context.Context, b *teal.Book) (*teal.Book, error) {
+func (m *mockStore) CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error) {
 	return m.createBookFn(ctx, b)
 }
 
-func (m *mockBookService) Update(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
+func (m *mockStore) UpdateBook(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
 	return m.updateBookFn(ctx, id, b)
 }
 
-func (m *mockBookService) Delete(ctx context.Context, id int) error {
+func (m *mockStore) DeleteBook(ctx context.Context, id int) error {
 	return m.deleteBookFn(ctx, id)
+}
+
+func (m *mockStore) RetrieveAuthorWithID(id int) (*teal.Author, error) {
+	return nil, nil
+
+}
+
+func (m *mockStore) RetrieveAllAuthors() ([]*teal.Author, error) {
+	return nil, nil
+
+}
+
+func (m *mockStore) CreateAuthor(ctx context.Context, b *teal.Author) error {
+	return nil
+
+}
+
+func (m *mockStore) UpdateAuthor(ctx context.Context, id int, b *teal.Author) (*teal.Author, error) {
+	return nil, nil
+
+}
+
+func (m *mockStore) DeleteAuthor(ctx context.Context, id int) error {
+	return nil
 }

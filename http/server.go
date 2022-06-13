@@ -22,8 +22,7 @@ type Server struct {
 	InfoLog *log.Logger
 	ErrLog  *log.Logger
 
-	Books   BookService
-	Authors AuthorService
+	Store Store
 }
 
 func NewServer() *Server {

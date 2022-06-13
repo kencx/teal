@@ -12,8 +12,8 @@ import (
 type AuthorService interface {
 	Get(id int) (*teal.Author, error)
 	GetAll() ([]*teal.Author, error)
-	Create(ctx context.Context, b *teal.Author) (*teal.Author, error)
-	Update(ctx context.Context, id int, b *teal.Author) (*teal.Author, error)
+	// Create(ctx context.Context, b *teal.Author) (*teal.Author, error)
+	// Update(ctx context.Context, id int, b *teal.Author) (*teal.Author, error)
 	Delete(ctx context.Context, id int) error
 }
 
@@ -23,7 +23,7 @@ func (s *Server) GetAuthor(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	b, err := s.Authors.Get(id)
+	b, err := s.Store.RetrieveAuthorWithID(id)
 	if err == teal.ErrDoesNotExist {
 		s.InfoLog.Printf("Author %d not found", id)
 		response.NotFound(rw, r, err)
@@ -46,7 +46,7 @@ func (s *Server) GetAuthor(rw http.ResponseWriter, r *http.Request) {
 
 func (s *Server) GetAllAuthors(rw http.ResponseWriter, r *http.Request) {
 
-	b, err := s.Authors.GetAll()
+	b, err := s.Store.RetrieveAllAuthors()
 	if err == teal.ErrNoRows {
 		s.InfoLog.Println("No authors found")
 		response.NoContent(rw, r)

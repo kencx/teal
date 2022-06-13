@@ -44,7 +44,7 @@ func TestGetBook(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Books: &mockBookService{
+		Store: &mockStore{
 			getBookFn: func(id int) (*teal.Book, error) {
 				return testBook1, nil
 			},
@@ -69,7 +69,7 @@ func TestGetAllBooks(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Books: &mockBookService{
+		Store: &mockStore{
 			getAllBooksFn: func() ([]*teal.Book, error) {
 				return testBooks, nil
 			},
@@ -99,7 +99,7 @@ func TestAddBook(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Books: &mockBookService{
+		Store: &mockStore{
 			createBookFn: func(ctx context.Context, b *teal.Book) (*teal.Book, error) {
 				return testBook1, nil
 			},
@@ -131,7 +131,7 @@ func TestAddBookFailValidation(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Books: &mockBookService{
+		Store: &mockStore{
 			createBookFn: func(ctx context.Context, b *teal.Book) (*teal.Book, error) {
 				return failBook, nil
 			},
@@ -158,7 +158,7 @@ func TestUpdateBook(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Books: &mockBookService{
+		Store: &mockStore{
 			updateBookFn: func(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
 				return testBook2, nil
 			},
@@ -189,7 +189,7 @@ func TestUpdateBookFailValidation(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Books: &mockBookService{
+		Store: &mockStore{
 			updateBookFn: func(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
 				return failBook, nil
 			},
@@ -214,7 +214,7 @@ func TestDeleteBook(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Books: &mockBookService{
+		Store: &mockStore{
 			deleteBookFn: func(ctx context.Context, id int) error {
 				return nil
 			},

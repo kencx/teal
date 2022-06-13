@@ -14,22 +14,13 @@ import (
 	"github.com/kencx/teal/util"
 )
 
-type BookService interface {
-	Get(id int) (*teal.Book, error)
-	GetByTitle(title string) (*teal.Book, error)
-	GetAll() ([]*teal.Book, error)
-	Create(ctx context.Context, b *teal.Book) (*teal.Book, error)
-	Update(ctx context.Context, id int, b *teal.Book) (*teal.Book, error)
-	Delete(ctx context.Context, id int) error
-}
-
 func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 	id := HandleId(rw, r)
 	if id == -1 {
 		return
 	}
 
-	b, err := s.Books.Get(id)
+	b, err := s.Store.RetrieveBookWithID(id)
 	if err == teal.ErrDoesNotExist {
 		s.InfoLog.Printf("Book %d not found", id)
 		response.NotFound(rw, r, err)
@@ -51,7 +42,7 @@ func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
-	b, err := s.Books.GetAll()
+	b, err := s.Store.RetrieveAllBooks()
 
 	if err == teal.ErrNoRows {
 		s.InfoLog.Println("No books found")
@@ -94,7 +85,7 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	result, err := s.Books.Create(ctx, &book)
+	result, err := s.Store.CreateBook(ctx, &book)
 	if err != nil {
 		s.ErrLog.Print(err)
 		response.Error(rw, r, err)
@@ -137,7 +128,7 @@ func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	result, err := s.Books.Update(ctx, id, &book)
+	result, err := s.Store.UpdateBook(ctx, id, &book)
 	if err == teal.ErrDoesNotExist {
 		response.Error(rw, r, err)
 		return
@@ -164,7 +155,7 @@ func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.Books.Delete(r.Context(), id)
+	err := s.Store.DeleteBook(r.Context(), id)
 	if err == teal.ErrDoesNotExist {
 		http.Error(rw, "Book not found", http.StatusNotFound)
 		return
