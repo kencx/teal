@@ -16,6 +16,50 @@ func linkBookToAuthor(tx *sqlx.Tx, book_id, author_id int64) error {
 	return nil
 }
 
+func linkBookToAuthors(tx *sqlx.Tx, book_id int64, author_ids []int64) error {
+	type value struct {
+		Book_id   int64
+		Author_id int64
+	}
+
+	var args = []*value{}
+	for _, a := range author_ids {
+		args = append(args, &value{
+			Book_id:   book_id,
+			Author_id: a,
+		})
+	}
+
+	stmt := `INSERT or IGNORE INTO books_authors (book_id, author_id) VALUES (:book_id, :author_id);`
+	_, err := tx.NamedExec(stmt, args)
+	if err != nil {
+		return fmt.Errorf("db: link book %d to authors %d in books_authors failed: %v", book_id, author_ids, err)
+	}
+	return nil
+}
+
+func unlinkBookFromAuthor(tx *sqlx.Tx, book_id, author_id int64) error {
+	stmt := `DELETE FROM books_authors WHERE book_id=? AND author_id!=?;`
+	_, err := tx.Exec(stmt, book_id, author_id)
+	if err != nil {
+		return fmt.Errorf("db: unlink author %v from book %v in book_authors failed: %v", author_id, book_id, err)
+	}
+	return nil
+}
+
+func unlinkBookFromAuthors(tx *sqlx.Tx, book_id int64, author_ids []int64) error {
+	stmt := `DELETE FROM books_authors WHERE book_id=? AND author_id NOT IN (?);`
+	query, args, err := sqlx.In(stmt, book_id, author_ids)
+	if err != nil {
+		return fmt.Errorf("db: unlink authors %v from book %v in book_authors failed: %v", author_ids, book_id, err)
+	}
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("db: unlink authors %v from book %v in book_authors failed: %v", author_ids, book_id, err)
+	}
+	return nil
+}
+
 // get list of author names from given isbn
 func getAuthorsFromBook(tx *sqlx.Tx, book_isbn string) ([]string, error) {
 

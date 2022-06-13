@@ -141,7 +141,8 @@ func (s *Store) RetrieveAllBooks() ([]*teal.Book, error) {
 	return books, nil
 }
 
-// Create book entry in books, author entries in authors
+// Create a book entry in books, author entries in authors and establishes the necessary
+// book author relationships
 func (s *Store) CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error) {
 	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
 
@@ -149,6 +150,7 @@ func (s *Store) CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error
 		if err != nil {
 			return err
 		}
+		// save created entity to context to extract after transaction
 		ctx = context.WithValue(ctx, bookCtxKey, book)
 
 		// create authors
@@ -159,11 +161,9 @@ func (s *Store) CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error
 		}
 
 		// establish new book author relationship
-		for _, a_id := range a_ids {
-			err := linkBookToAuthor(tx, int64(book.ID), a_id)
-			if err != nil {
-				return err
-			}
+		err = linkBookToAuthors(tx, int64(book.ID), a_ids)
+		if err != nil {
+			return err
 		}
 		return nil
 
@@ -202,25 +202,11 @@ func (s *Store) UpdateBook(ctx context.Context, id int, b *teal.Book) (*teal.Boo
 				return err
 			}
 
-			// establish NEW or EXISTING book author relationships
-			for _, a_id := range a_ids {
-				err := linkBookToAuthor(tx, int64(id), a_id)
-				if err != nil {
-					return err
-				}
-			}
+			// establish book author relationships with NEW or EXISTING authors
+			linkBookToAuthors(tx, int64(id), a_ids)
 
 			// remove broken book author relationships
-			stmt := `DELETE FROM books_authors
-				WHERE book_id=? AND author_id NOT IN (?);`
-			query, args, err := sqlx.In(stmt, id, a_ids)
-			if err != nil {
-				return fmt.Errorf("db: unlink book %d to authors %v in book_authors failed: %v", id, a_ids, err)
-			}
-			_, err = tx.Exec(query, args...)
-			if err != nil {
-				return fmt.Errorf("db: update book %d in books_authors failed: %v", id, err)
-			}
+			unlinkBookFromAuthors(tx, int64(id), a_ids)
 
 			// delete authors with no books
 			err = deleteAuthorsWithNoBooks(tx)
