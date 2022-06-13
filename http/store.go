@@ -16,7 +16,7 @@ type Store interface {
 
 	RetrieveAuthorWithID(id int) (*teal.Author, error)
 	RetrieveAllAuthors() ([]*teal.Author, error)
-	CreateAuthor(ctx context.Context, b *teal.Author) error
-	// UpdateAuthor(ctx context.Context, id int, b *teal.Author) (*teal.Author, error)
+	CreateAuthor(ctx context.Context, b *teal.Author) (*teal.Author, error)
+	UpdateAuthor(ctx context.Context, id int, b *teal.Author) (*teal.Author, error)
 	DeleteAuthor(ctx context.Context, id int) error
 }

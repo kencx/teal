@@ -67,12 +67,22 @@ func (s *Server) RegisterRoutes() {
 	s.Router.HandleFunc("/health", s.Healthcheck).Methods(http.MethodGet)
 	apiRouter := s.Router.PathPrefix("/api/").Subrouter()
 
-	postRouter := s.Router.Methods(http.MethodPost).Subrouter()
-	postRouter.HandleFunc("/", s.AddBook)
+	bookRouter := apiRouter.PathPrefix("/books/").Subrouter()
+	authorRouter := apiRouter.PathPrefix("/authors/").Subrouter()
 
-	putRouter := s.Router.Methods(http.MethodPut).Subrouter()
-	putRouter.HandleFunc("/{id:[0-9]+}", s.UpdateBook)
+	getBookRouter := bookRouter.Methods(http.MethodGet).Subrouter()
+	getBookRouter.HandleFunc("/", s.GetAllBooks)
+	getBookRouter.HandleFunc("/{id:[0-9]+}/", s.GetBook)
 
-	deleteRouter := s.Router.Methods(http.MethodDelete).Subrouter()
-	deleteRouter.HandleFunc("/{id:[0-9]+}", s.DeleteBook)
+	bookRouter.HandleFunc("/", s.AddBook).Methods(http.MethodPost)
+	bookRouter.HandleFunc("/{id:[0-9]+}/", s.UpdateBook).Methods(http.MethodPut)
+	bookRouter.HandleFunc("/{id:[0-9]+}/", s.DeleteBook).Methods(http.MethodDelete)
+
+	getAuthorRouter := authorRouter.Methods(http.MethodGet).Subrouter()
+	getAuthorRouter.HandleFunc("/", s.GetAllAuthors)
+	getAuthorRouter.HandleFunc("/{id:[0-9]+}/", s.GetAuthor)
+
+	authorRouter.HandleFunc("/", s.AddAuthor).Methods(http.MethodPost)
+	authorRouter.HandleFunc("/{id:[0-9]+}/", s.UpdateAuthor).Methods(http.MethodPut)
+	authorRouter.HandleFunc("/{id:[0-9]+}/", s.DeleteAuthor).Methods(http.MethodDelete)
 }

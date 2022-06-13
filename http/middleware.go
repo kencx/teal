@@ -24,7 +24,6 @@ func (s Server) MiddlewareBookValidation(next http.Handler) http.Handler {
 			return
 		}
 
-		// TODO should this be in middleware or service layer?
 		verrs := book.Validate()
 		if len(verrs) > 0 {
 			// s.ErrLog.Println(verrs)

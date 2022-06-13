@@ -13,6 +13,12 @@ type mockStore struct {
 	createBookFn     func(ctx context.Context, b *teal.Book) (*teal.Book, error)
 	updateBookFn     func(ctx context.Context, id int, b *teal.Book) (*teal.Book, error)
 	deleteBookFn     func(ctx context.Context, id int) error
+
+	getAuthorFn     func(id int) (*teal.Author, error)
+	getAllAuthorsFn func() ([]*teal.Author, error)
+	createAuthorFn  func(ctx context.Context, a *teal.Author) (*teal.Author, error)
+	updateAuthorFn  func(ctx context.Context, id int, a *teal.Author) (*teal.Author, error)
+	deleteAuthorFn  func(ctx context.Context, id int) error
 }
 
 func (m *mockStore) RetrieveAllBooks() ([]*teal.Book, error) {
@@ -40,25 +46,25 @@ func (m *mockStore) DeleteBook(ctx context.Context, id int) error {
 }
 
 func (m *mockStore) RetrieveAuthorWithID(id int) (*teal.Author, error) {
-	return nil, nil
+	return m.getAuthorFn(id)
 
 }
 
 func (m *mockStore) RetrieveAllAuthors() ([]*teal.Author, error) {
-	return nil, nil
+	return m.getAllAuthorsFn()
 
 }
 
-func (m *mockStore) CreateAuthor(ctx context.Context, b *teal.Author) error {
-	return nil
+func (m *mockStore) CreateAuthor(ctx context.Context, a *teal.Author) (*teal.Author, error) {
+	return m.createAuthorFn(ctx, a)
 
 }
 
-func (m *mockStore) UpdateAuthor(ctx context.Context, id int, b *teal.Author) (*teal.Author, error) {
-	return nil, nil
+func (m *mockStore) UpdateAuthor(ctx context.Context, id int, a *teal.Author) (*teal.Author, error) {
+	return m.updateAuthorFn(ctx, id, a)
 
 }
 
 func (m *mockStore) DeleteAuthor(ctx context.Context, id int) error {
-	return nil
+	return m.deleteAuthorFn(ctx, id)
 }

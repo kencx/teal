@@ -51,7 +51,7 @@ func TestGetBook(t *testing.T) {
 		},
 	}
 
-	w, err := getOrDeleteResponse(http.MethodGet, "/1", s.GetBook)
+	w, err := getResponse("/api/books/1", s.GetBook)
 	checkErr(t, err)
 
 	var got teal.Book
@@ -76,7 +76,7 @@ func TestGetAllBooks(t *testing.T) {
 		},
 	}
 
-	w, err := getOrDeleteResponse(http.MethodGet, "/", s.GetAllBooks)
+	w, err := getResponse("/api/books", s.GetAllBooks)
 	checkErr(t, err)
 
 	var got []teal.Book
@@ -105,7 +105,7 @@ func TestAddBook(t *testing.T) {
 			},
 		}}
 
-	w, err := postResponse("/", bytes.NewReader(want), s.AddBook)
+	w, err := postResponse("/api/books", bytes.NewReader(want), s.AddBook)
 	checkErr(t, err)
 
 	var got teal.Book
@@ -137,7 +137,7 @@ func TestAddBookFailValidation(t *testing.T) {
 			},
 		}}
 
-	w, err := postResponse("/", bytes.NewBuffer(want), s.AddBook)
+	w, err := postResponse("/api/books", bytes.NewBuffer(want), s.AddBook)
 	checkErr(t, err)
 
 	// get response
@@ -163,7 +163,7 @@ func TestUpdateBook(t *testing.T) {
 				return testBook2, nil
 			},
 		}}
-	w, err := putResponse("/1", bytes.NewBuffer(want), s.UpdateBook)
+	w, err := putResponse("/api/books/1", bytes.NewBuffer(want), s.UpdateBook)
 	checkErr(t, err)
 
 	var got teal.Book
@@ -195,7 +195,7 @@ func TestUpdateBookFailValidation(t *testing.T) {
 			},
 		}}
 
-	w, err := putResponse("/1", bytes.NewBuffer(want), s.UpdateBook)
+	w, err := putResponse("/api/books/1", bytes.NewBuffer(want), s.UpdateBook)
 	checkErr(t, err)
 
 	// get response
@@ -220,14 +220,26 @@ func TestDeleteBook(t *testing.T) {
 			},
 		}}
 
-	w, err := getOrDeleteResponse(http.MethodDelete, "/1", s.DeleteBook)
+	w, err := deleteResponse("/api/books/1", s.DeleteBook)
 	checkErr(t, err)
 
 	assertEqual(t, w.Code, http.StatusOK)
 }
 
-func getOrDeleteResponse(method string, url string, f func(http.ResponseWriter, *http.Request)) (*httptest.ResponseRecorder, error) {
-	req, err := http.NewRequest(method, url, nil)
+func getResponse(url string, f func(http.ResponseWriter, *http.Request)) (*httptest.ResponseRecorder, error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	w := httptest.NewRecorder()
+	req = mux.SetURLVars(req, map[string]string{"id": "1"})
+
+	http.HandlerFunc(f).ServeHTTP(w, req)
+	return w, nil
+}
+
+func deleteResponse(url string, f func(http.ResponseWriter, *http.Request)) (*httptest.ResponseRecorder, error) {
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
 		return nil, err
 	}
