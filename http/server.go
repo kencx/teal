@@ -64,9 +64,8 @@ func (s *Server) Close() error {
 
 func (s *Server) RegisterRoutes() {
 
-	getRouter := s.Router.Methods(http.MethodGet).Subrouter()
-	getRouter.HandleFunc("/", s.GetAllBooks)
-	getRouter.HandleFunc("/{id:[0-9]+}", s.GetBook)
+	s.Router.HandleFunc("/health", s.Healthcheck).Methods(http.MethodGet)
+	apiRouter := s.Router.PathPrefix("/api/").Subrouter()
 
 	postRouter := s.Router.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/", s.AddBook)
