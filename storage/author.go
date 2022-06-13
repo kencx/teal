@@ -96,23 +96,36 @@ func (s *Store) RetrieveAllAuthorNames() ([]string, error) {
 	return dest, nil
 }
 
-// TODO return Author
-func (s *Store) CreateAuthor(ctx context.Context, a *teal.Author) error {
+func (s *Store) CreateAuthor(ctx context.Context, a *teal.Author) (*teal.Author, error) {
 	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
 
-		_, err := insertOrGetAuthor(tx, a)
+		id, err := insertOrGetAuthor(tx, a)
 		if err != nil {
 			return err
 		}
+		// save id to context for querying later
+		ctx = context.WithValue(ctx, authorCtxKey, id)
 		return nil
 
 	}, &sql.TxOptions{}); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+
+	// TODO implement separate context package with type safe getters and setters
+	id, ok := ctx.Value(authorCtxKey).(int64)
+	if !ok {
+		return nil, fmt.Errorf("db: failed to cast author")
+	}
+
+	// query author after transaction committed
+	author, err := s.RetrieveAuthorWithID(int(id))
+	if err != nil {
+		return nil, err
+	}
+	return author, nil
 }
 
-func (s *Store) UpdateAuthor(ctx context.Context, id int, a *teal.Author) error {
+func (s *Store) UpdateAuthor(ctx context.Context, id int, a *teal.Author) (*teal.Author, error) {
 	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
 
 		err := updateAuthor(tx, id, a)
@@ -122,9 +135,14 @@ func (s *Store) UpdateAuthor(ctx context.Context, id int, a *teal.Author) error 
 		return nil
 
 	}, &sql.TxOptions{}); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+
+	author, err := s.RetrieveAuthorWithID(int(id))
+	if err != nil {
+		return nil, err
+	}
+	return author, nil
 }
 
 func (s *Store) DeleteAuthor(ctx context.Context, id int) error {

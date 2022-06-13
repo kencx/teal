@@ -80,10 +80,7 @@ func TestCreateAuthor(t *testing.T) {
 
 	want := &teal.Author{Name: "FooBar"}
 
-	err := db.CreateAuthor(context.Background(), want)
-	checkErr(t, err)
-
-	got, err := db.RetrieveAuthorWithName(want.Name)
+	got, err := db.CreateAuthor(context.Background(), want)
 	checkErr(t, err)
 
 	if got.Name != want.Name {
@@ -122,10 +119,7 @@ func TestUpdateAuthor(t *testing.T) {
 	want := testAuthor1
 	want.Name = "John Watson"
 
-	err := db.UpdateAuthor(context.Background(), want.ID, want)
-	checkErr(t, err)
-
-	got, err := db.RetrieveAuthorWithID(want.ID)
+	got, err := db.UpdateAuthor(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	if got.Name != want.Name {
@@ -138,7 +132,7 @@ func TestUpdateAuthorExisting(t *testing.T) {
 	want := testAuthor1
 	want.Name = "John Doe"
 
-	err := db.UpdateAuthor(context.Background(), want.ID, want)
+	_, err := db.UpdateAuthor(context.Background(), want.ID, want)
 	if err == nil {
 		t.Errorf("expected error: unique constraint Name")
 	}
