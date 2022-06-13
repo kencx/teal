@@ -17,7 +17,7 @@ func (s *Server) GetAuthor(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a, err := s.Store.RetrieveAuthorWithID(id)
+	a, err := s.Authors.Get(id)
 	if err == teal.ErrDoesNotExist {
 		s.InfoLog.Printf("Author %d not found", id)
 		response.NotFound(rw, r, err)
@@ -40,7 +40,7 @@ func (s *Server) GetAuthor(rw http.ResponseWriter, r *http.Request) {
 
 func (s *Server) GetAllAuthors(rw http.ResponseWriter, r *http.Request) {
 
-	b, err := s.Store.RetrieveAllAuthors()
+	b, err := s.Authors.GetAll()
 	if err == teal.ErrNoRows {
 		s.InfoLog.Println("No authors found")
 		response.NoContent(rw, r)
@@ -82,7 +82,7 @@ func (s *Server) AddAuthor(rw http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	result, err := s.Store.CreateAuthor(ctx, &author)
+	result, err := s.Authors.Create(ctx, &author)
 	if err != nil {
 		s.ErrLog.Print(err)
 		response.Error(rw, r, err)
@@ -125,7 +125,7 @@ func (s *Server) UpdateAuthor(rw http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	result, err := s.Store.UpdateAuthor(ctx, id, &author)
+	result, err := s.Authors.Update(ctx, id, &author)
 	if err == teal.ErrDoesNotExist {
 		response.Error(rw, r, err)
 		return
@@ -152,7 +152,7 @@ func (s *Server) DeleteAuthor(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.Store.DeleteAuthor(r.Context(), id)
+	err := s.Authors.Delete(r.Context(), id)
 	if err == teal.ErrDoesNotExist {
 		http.Error(rw, "Author not found", http.StatusNotFound)
 		return

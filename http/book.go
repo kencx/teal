@@ -20,7 +20,7 @@ func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	b, err := s.Store.RetrieveBookWithID(id)
+	b, err := s.Books.Get(id)
 	if err == teal.ErrDoesNotExist {
 		s.InfoLog.Printf("Book %d not found", id)
 		response.NotFound(rw, r, err)
@@ -41,8 +41,21 @@ func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 	response.OK(rw, r, res)
 }
 
+func hasQueryParam(param string, r *http.Request) bool {
+	p := r.URL.Query().Get(param)
+	return p != ""
+}
+
 func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
-	b, err := s.Store.RetrieveAllBooks()
+
+	var b []*teal.Book
+	var err error
+
+	if hasQueryParam("author", r) {
+		b, err = s.Books.GetByAuthor(r.URL.Query().Get("author"))
+	} else {
+		b, err = s.Books.GetAll()
+	}
 
 	if err == teal.ErrNoRows {
 		s.InfoLog.Println("No books found")
@@ -85,7 +98,7 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	result, err := s.Store.CreateBook(ctx, &book)
+	result, err := s.Books.Create(ctx, &book)
 	if err != nil {
 		s.ErrLog.Print(err)
 		response.Error(rw, r, err)
@@ -128,7 +141,7 @@ func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	result, err := s.Store.UpdateBook(ctx, id, &book)
+	result, err := s.Books.Update(ctx, id, &book)
 	if err == teal.ErrDoesNotExist {
 		response.Error(rw, r, err)
 		return
@@ -155,7 +168,7 @@ func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.Store.DeleteBook(r.Context(), id)
+	err := s.Books.Delete(r.Context(), id)
 	if err == teal.ErrDoesNotExist {
 		http.Error(rw, "Book not found", http.StatusNotFound)
 		return

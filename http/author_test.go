@@ -26,7 +26,7 @@ func TestGetAuthor(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mock.Store{
+		Authors: &mock.AuthorService{
 			GetAuthorFn: func(id int) (*teal.Author, error) {
 				return testAuthor1, nil
 			},
@@ -49,7 +49,7 @@ func TestGetAllAuthors(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mock.Store{
+		Authors: &mock.AuthorService{
 			GetAllAuthorsFn: func() ([]*teal.Author, error) {
 				return testAuthors, nil
 			},
@@ -77,7 +77,7 @@ func TestAddAuthor(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mock.Store{
+		Authors: &mock.AuthorService{
 			CreateAuthorFn: func(ctx context.Context, a *teal.Author) (*teal.Author, error) {
 				return testAuthor1, nil
 			},
@@ -103,7 +103,7 @@ func TestUpdateAuthor(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mock.Store{
+		Authors: &mock.AuthorService{
 			UpdateAuthorFn: func(ctx context.Context, id int, a *teal.Author) (*teal.Author, error) {
 				return testAuthor2, nil
 			},
@@ -126,7 +126,7 @@ func TestDeleteAuthor(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mock.Store{
+		Authors: &mock.AuthorService{
 			DeleteAuthorFn: func(ctx context.Context, id int) error {
 				return nil
 			},

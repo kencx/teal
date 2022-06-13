@@ -45,7 +45,7 @@ func TestGetBook(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mock.Store{
+		Books: &mock.BookService{
 			GetBookFn: func(id int) (*teal.Book, error) {
 				return testBook1, nil
 			},
@@ -70,7 +70,7 @@ func TestGetAllBooks(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mock.Store{
+		Books: &mock.BookService{
 			GetAllBooksFn: func() ([]*teal.Book, error) {
 				return testBooks, nil
 			},
@@ -93,6 +93,43 @@ func TestGetAllBooks(t *testing.T) {
 	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
 }
 
+func TestQueryBooksFromAuthor(t *testing.T) {
+	s := Server{
+		InfoLog: testInfoLog,
+		ErrLog:  testErrLog,
+		Books: &mock.BookService{
+			GetByAuthorFn: func(name string) ([]*teal.Book, error) {
+				return testBooks, nil
+			},
+		}}
+
+	w, err := getResponse("/api/books/?author=John+Doe", s.GetAllBooks)
+	checkErr(t, err)
+
+	var got []*teal.Book
+	err = json.NewDecoder(w.Body).Decode(&got)
+	checkErr(t, err)
+
+	assertEqual(t, w.Code, http.StatusOK)
+	assertObjectEqual(t, got, testBooks)
+}
+
+func TestNilQueryBooksFromAuthor(t *testing.T) {
+	s := Server{
+		InfoLog: testInfoLog,
+		ErrLog:  testErrLog,
+		Books: &mock.BookService{
+			GetByAuthorFn: func(name string) ([]*teal.Book, error) {
+				return nil, teal.ErrNoRows
+			},
+		}}
+
+	w, err := getResponse("/api/books/?author=John+Doe", s.GetAllBooks)
+	checkErr(t, err)
+
+	assertEqual(t, w.Code, http.StatusNoContent)
+}
+
 func TestAddBook(t *testing.T) {
 	want, err := util.ToJSON(testBook1)
 	checkErr(t, err)
@@ -100,7 +137,7 @@ func TestAddBook(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mock.Store{
+		Books: &mock.BookService{
 			CreateBookFn: func(ctx context.Context, b *teal.Book) (*teal.Book, error) {
 				return testBook1, nil
 			},
@@ -132,7 +169,7 @@ func TestAddBookFailValidation(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mock.Store{
+		Books: &mock.BookService{
 			CreateBookFn: func(ctx context.Context, b *teal.Book) (*teal.Book, error) {
 				return failBook, nil
 			},
@@ -159,7 +196,7 @@ func TestUpdateBook(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mock.Store{
+		Books: &mock.BookService{
 			UpdateBookFn: func(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
 				return testBook2, nil
 			},
@@ -190,7 +227,7 @@ func TestUpdateBookFailValidation(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mock.Store{
+		Books: &mock.BookService{
 			UpdateBookFn: func(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
 				return failBook, nil
 			},
@@ -215,7 +252,7 @@ func TestDeleteBook(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mock.Store{
+		Books: &mock.BookService{
 			DeleteBookFn: func(ctx context.Context, id int) error {
 				return nil
 			},

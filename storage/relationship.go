@@ -2,9 +2,72 @@ package storage
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/kencx/teal"
 )
+
+// get list of author names from given isbn
+func (s *Store) RetrieveAuthorsFromBook(book_isbn string) ([]string, error) {
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
+	}
+	defer endTx(tx, err)
+
+	var dest []struct {
+		Title string
+		Name  string
+	}
+	stmt := `SELECT b.title, a.name
+		FROM books_authors ba
+		JOIN books b ON b.id=ba.book_id
+		JOIN authors a ON a.id=ba.author_id
+		WHERE b.isbn=$1`
+
+	if err := tx.Select(&dest, stmt, book_isbn); err != nil {
+		return nil, err
+	}
+
+	var authors []string
+	for _, v := range dest {
+		authors = append(authors, v.Name)
+	}
+	return authors, nil
+}
+
+func (s *Store) RetrieveBooksFromAuthor(name string) ([]*teal.Book, error) {
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
+	}
+	defer endTx(tx, err)
+	var dest []BookAuthorDest
+
+	stmt := `SELECT b.*, group_concat(a.name) as author_string
+		FROM books_authors ba
+		JOIN books b ON b.id=ba.book_id
+		JOIN authors a ON a.id=ba.author_id
+		WHERE b.id IN (SELECT ba.book_id
+			FROM books_authors ba
+			JOIN authors a ON a.id=ba.author_id
+			WHERE a.name=$1)
+		GROUP BY b.id`
+
+	if err := tx.Select(&dest, stmt, name); err != nil {
+		return nil, err
+	}
+
+	var result []*teal.Book
+	for _, v := range dest {
+		r := v.Book
+		r.Author = strings.Split(v.Author_string, ",")
+		result = append(result, r)
+	}
+
+	return result, nil
+}
 
 func linkBookToAuthor(tx *sqlx.Tx, book_id, author_id int64) error {
 	stmt := `INSERT or IGNORE INTO books_authors (book_id, author_id) VALUES ($1, $2);`
@@ -58,51 +121,4 @@ func unlinkBookFromAuthors(tx *sqlx.Tx, book_id int64, author_ids []int64) error
 		return fmt.Errorf("db: unlink authors %v from book %v in book_authors failed: %v", author_ids, book_id, err)
 	}
 	return nil
-}
-
-// get list of author names from given isbn
-func getAuthorsFromBook(tx *sqlx.Tx, book_isbn string) ([]string, error) {
-
-	var dest []struct {
-		Title string
-		Name  string
-	}
-	stmt := `SELECT b.title, a.name
-		FROM books_authors ba
-		JOIN books b ON b.id=ba.book_id
-		JOIN authors a ON a.id=ba.author_id
-		WHERE b.isbn=$1`
-
-	if err := tx.Select(&dest, stmt, book_isbn); err != nil {
-		return nil, err
-	}
-
-	var authors []string
-	for _, v := range dest {
-		authors = append(authors, v.Name)
-	}
-	return authors, nil
-}
-
-func getBooksFromAuthor(tx *sqlx.Tx, name string) ([]string, error) {
-	var dest []struct {
-		Title string
-		Name  string
-	}
-
-	stmt := `SELECT b.title, a.name
-		FROM books_authors ba
-		JOIN books b ON b.id=ba.book_id
-		JOIN authors a ON a.id=ba.author_id
-		WHERE a.name=$1`
-
-	if err := tx.Select(&dest, stmt, name); err != nil {
-		return nil, err
-	}
-
-	var books []string
-	for _, v := range dest {
-		books = append(books, v.Title)
-	}
-	return books, nil
 }

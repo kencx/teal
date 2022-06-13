@@ -22,7 +22,8 @@ type Server struct {
 	InfoLog *log.Logger
 	ErrLog  *log.Logger
 
-	Store Store
+	Books   BookService
+	Authors AuthorService
 }
 
 func NewServer() *Server {
@@ -65,24 +66,20 @@ func (s *Server) Close() error {
 func (s *Server) RegisterRoutes() {
 
 	s.Router.HandleFunc("/health", s.Healthcheck).Methods(http.MethodGet)
-	apiRouter := s.Router.PathPrefix("/api/").Subrouter()
+	api := s.Router.PathPrefix("/api").Subrouter()
 
-	bookRouter := apiRouter.PathPrefix("/books/").Subrouter()
-	authorRouter := apiRouter.PathPrefix("/authors/").Subrouter()
+	br := api.PathPrefix("/books").Subrouter()
+	ar := api.PathPrefix("/authors").Subrouter()
 
-	getBookRouter := bookRouter.Methods(http.MethodGet).Subrouter()
-	getBookRouter.HandleFunc("/", s.GetAllBooks)
-	getBookRouter.HandleFunc("/{id:[0-9]+}/", s.GetBook)
+	br.HandleFunc("/{id:[0-9]+}", s.GetBook).Methods(http.MethodGet)
+	br.HandleFunc("/", s.GetAllBooks).Methods(http.MethodGet)
+	br.HandleFunc("/{id:[0-9]+}/", s.UpdateBook).Methods(http.MethodPut)
+	br.HandleFunc("/{id:[0-9]+}/", s.DeleteBook).Methods(http.MethodDelete)
+	br.HandleFunc("/", s.AddBook).Methods(http.MethodPost)
 
-	bookRouter.HandleFunc("/", s.AddBook).Methods(http.MethodPost)
-	bookRouter.HandleFunc("/{id:[0-9]+}/", s.UpdateBook).Methods(http.MethodPut)
-	bookRouter.HandleFunc("/{id:[0-9]+}/", s.DeleteBook).Methods(http.MethodDelete)
-
-	getAuthorRouter := authorRouter.Methods(http.MethodGet).Subrouter()
-	getAuthorRouter.HandleFunc("/", s.GetAllAuthors)
-	getAuthorRouter.HandleFunc("/{id:[0-9]+}/", s.GetAuthor)
-
-	authorRouter.HandleFunc("/", s.AddAuthor).Methods(http.MethodPost)
-	authorRouter.HandleFunc("/{id:[0-9]+}/", s.UpdateAuthor).Methods(http.MethodPut)
-	authorRouter.HandleFunc("/{id:[0-9]+}/", s.DeleteAuthor).Methods(http.MethodDelete)
+	ar.HandleFunc("/{id:[0-9]+}/", s.GetAuthor).Methods(http.MethodGet)
+	ar.HandleFunc("/", s.GetAllAuthors).Methods(http.MethodGet)
+	ar.HandleFunc("/{id:[0-9]+}/", s.UpdateAuthor).Methods(http.MethodPut)
+	ar.HandleFunc("/{id:[0-9]+}/", s.DeleteAuthor).Methods(http.MethodDelete)
+	ar.HandleFunc("/", s.AddAuthor).Methods(http.MethodPost)
 }

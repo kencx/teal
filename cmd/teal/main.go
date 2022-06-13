@@ -5,6 +5,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/kencx/teal/author"
+	"github.com/kencx/teal/book"
 	"github.com/kencx/teal/http"
 	"github.com/kencx/teal/storage"
 )
@@ -46,7 +48,9 @@ func (a *App) Run(port string) error {
 		return err
 	}
 	a.server.InfoLog.Println("Database connection successfully established!")
-	a.server.Store = a.db
+
+	a.server.Books = book.NewService(a.db)
+	a.server.Authors = author.NewService(a.db)
 
 	if err := a.server.Run(port); err != nil {
 		return err
