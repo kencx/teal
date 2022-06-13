@@ -2,21 +2,48 @@ package teal
 
 import (
 	"database/sql"
+	"encoding/json"
 	"regexp"
 )
 
 type Book struct {
-	ID            int            `json:"id" db:"id"`
-	Title         string         `json:"title" db:"title"`
-	Description   sql.NullString `json:"description,omitempty" db:"description"`
-	Author        []string       `json:"author"`
-	ISBN          string         `json:"isbn" db:"isbn"`
-	NumOfPages    int            `json:"num_of_pages" db:"numOfPages"`
-	Rating        int            `json:"rating" db:"rating"`
-	State         string         `json:"state" db:"state"` // default empty
-	DateAdded     sql.NullTime   `json:"-" db:"dateAdded"`
-	DateUpdated   sql.NullTime   `json:"-" db:"dateUpdated"`
-	DateCompleted sql.NullTime   `json:"-" db:"dateCompleted"`
+	ID            int          `json:"id" db:"id"`
+	Title         string       `json:"title" db:"title"`
+	Description   NullString   `json:"description,omitempty" db:"description"`
+	Author        []string     `json:"author"`
+	ISBN          string       `json:"isbn" db:"isbn"`
+	NumOfPages    int          `json:"num_of_pages" db:"numOfPages"`
+	Rating        int          `json:"rating" db:"rating"`
+	State         string       `json:"state" db:"state"` // default empty
+	DateAdded     sql.NullTime `json:"-" db:"dateAdded"`
+	DateUpdated   sql.NullTime `json:"-" db:"dateUpdated"`
+	DateCompleted sql.NullTime `json:"-" db:"dateCompleted"`
+}
+
+type NullString struct {
+	sql.NullString
+}
+
+func (n NullString) MarshalJSON() ([]byte, error) {
+	if n.Valid {
+		return json.Marshal(n.String)
+	}
+	return json.Marshal(nil)
+}
+
+func (n NullString) UnmarshalJSON(data []byte) error {
+	var s *string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	if s != nil {
+		n.Valid = true
+		n.String = *s
+	} else {
+		n.Valid = false
+	}
+	return nil
 }
 
 // func (b Book) String() string {
