@@ -4,19 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
-
-	"github.com/kencx/teal"
 )
 
 func TestHealthcheck(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mockStore{
-			getAuthorFn: func(id int) (*teal.Author, error) {
-				return testAuthor1, nil
-			},
-		},
 	}
 
 	w, err := getResponse("/health", s.Healthcheck)

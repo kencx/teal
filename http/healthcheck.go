@@ -8,7 +8,7 @@ import (
 )
 
 type health struct {
-	Version string
+	Version string `json:"version"`
 }
 
 func NewHealth(version string) *health {

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/kencx/teal"
+	"github.com/kencx/teal/mock"
 	"github.com/kencx/teal/util"
 )
 
@@ -25,8 +26,8 @@ func TestGetAuthor(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mockStore{
-			getAuthorFn: func(id int) (*teal.Author, error) {
+		Store: &mock.Store{
+			GetAuthorFn: func(id int) (*teal.Author, error) {
 				return testAuthor1, nil
 			},
 		},
@@ -48,8 +49,8 @@ func TestGetAllAuthors(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mockStore{
-			getAllAuthorsFn: func() ([]*teal.Author, error) {
+		Store: &mock.Store{
+			GetAllAuthorsFn: func() ([]*teal.Author, error) {
 				return testAuthors, nil
 			},
 		},
@@ -76,8 +77,8 @@ func TestAddAuthor(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mockStore{
-			createAuthorFn: func(ctx context.Context, a *teal.Author) (*teal.Author, error) {
+		Store: &mock.Store{
+			CreateAuthorFn: func(ctx context.Context, a *teal.Author) (*teal.Author, error) {
 				return testAuthor1, nil
 			},
 		},
@@ -102,8 +103,8 @@ func TestUpdateAuthor(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mockStore{
-			updateAuthorFn: func(ctx context.Context, id int, a *teal.Author) (*teal.Author, error) {
+		Store: &mock.Store{
+			UpdateAuthorFn: func(ctx context.Context, id int, a *teal.Author) (*teal.Author, error) {
 				return testAuthor2, nil
 			},
 		},
@@ -125,8 +126,8 @@ func TestDeleteAuthor(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mockStore{
-			deleteAuthorFn: func(ctx context.Context, id int) error {
+		Store: &mock.Store{
+			DeleteAuthorFn: func(ctx context.Context, id int) error {
 				return nil
 			},
 		},

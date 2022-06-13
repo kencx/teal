@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/kencx/teal"
 	"github.com/kencx/teal/http/response"
+	"github.com/kencx/teal/mock"
 	"github.com/kencx/teal/util"
 )
 
@@ -44,8 +45,8 @@ func TestGetBook(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mockStore{
-			getBookFn: func(id int) (*teal.Book, error) {
+		Store: &mock.Store{
+			GetBookFn: func(id int) (*teal.Book, error) {
 				return testBook1, nil
 			},
 		},
@@ -69,8 +70,8 @@ func TestGetAllBooks(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mockStore{
-			getAllBooksFn: func() ([]*teal.Book, error) {
+		Store: &mock.Store{
+			GetAllBooksFn: func() ([]*teal.Book, error) {
 				return testBooks, nil
 			},
 		},
@@ -99,8 +100,8 @@ func TestAddBook(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mockStore{
-			createBookFn: func(ctx context.Context, b *teal.Book) (*teal.Book, error) {
+		Store: &mock.Store{
+			CreateBookFn: func(ctx context.Context, b *teal.Book) (*teal.Book, error) {
 				return testBook1, nil
 			},
 		}}
@@ -131,8 +132,8 @@ func TestAddBookFailValidation(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mockStore{
-			createBookFn: func(ctx context.Context, b *teal.Book) (*teal.Book, error) {
+		Store: &mock.Store{
+			CreateBookFn: func(ctx context.Context, b *teal.Book) (*teal.Book, error) {
 				return failBook, nil
 			},
 		}}
@@ -158,8 +159,8 @@ func TestUpdateBook(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mockStore{
-			updateBookFn: func(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
+		Store: &mock.Store{
+			UpdateBookFn: func(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
 				return testBook2, nil
 			},
 		}}
@@ -189,8 +190,8 @@ func TestUpdateBookFailValidation(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mockStore{
-			updateBookFn: func(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
+		Store: &mock.Store{
+			UpdateBookFn: func(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
 				return failBook, nil
 			},
 		}}
@@ -214,8 +215,8 @@ func TestDeleteBook(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Store: &mockStore{
-			deleteBookFn: func(ctx context.Context, id int) error {
+		Store: &mock.Store{
+			DeleteBookFn: func(ctx context.Context, id int) error {
 				return nil
 			},
 		}}
