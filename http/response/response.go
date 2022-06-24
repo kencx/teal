@@ -67,6 +67,14 @@ func NotFound(rw http.ResponseWriter, r *http.Request, err error) {
 	res.Write()
 }
 
+func Unauthorized(rw http.ResponseWriter, r *http.Request, body []byte) {
+	res := New(rw, r)
+	res.statusCode = http.StatusUnauthorized
+	res.headers["WWW-Authenticate"] = `Basic realm="Restricted"`
+	res.body = body
+	res.Write()
+}
+
 func Error(rw http.ResponseWriter, r *http.Request, err error) {
 	if err == nil {
 		return

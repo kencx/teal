@@ -26,3 +26,12 @@ CREATE TABLE IF NOT EXISTS books_authors (
 	PRIMARY KEY(book_id, author_id)
 );
 
+CREATE TABLE IF NOT EXISTS users (
+	id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	username TEXT NOT NULL UNIQUE,
+	hashed_password TEXT NOT NULL,
+	email TEXT NOT NULL,
+	token TEXT,
+	role TEXT DEFAULT "user",
+	created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

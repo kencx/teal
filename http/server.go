@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	idleTimeout      = 120 * time.Second
-	readWriteTimeout = 1 * time.Second
-	closeTimeout     = 5 * time.Second
+	idleTimeout      = 60 * time.Second
+	readWriteTimeout = 3 * time.Second
+	closeTimeout     = 10 * time.Second
 )
 
 type Server struct {
@@ -22,15 +22,16 @@ type Server struct {
 	InfoLog *log.Logger
 	ErrLog  *log.Logger
 
-	Books   BookService
-	Authors AuthorService
+	Books   BookStore
+	Authors AuthorStore
+	Users   UserStore
 }
 
 func NewServer() *Server {
 	s := &Server{
 		Router:  mux.NewRouter(),
 		InfoLog: log.New(os.Stdout, "INFO ", log.LstdFlags),
-		ErrLog:  log.New(os.Stdout, "ERROR ", log.LstdFlags),
+		ErrLog:  log.New(os.Stderr, "ERROR ", log.LstdFlags),
 	}
 
 	s.Server = &http.Server{
@@ -68,8 +69,20 @@ func (s *Server) RegisterRoutes() {
 	s.Router.HandleFunc("/health", s.Healthcheck).Methods(http.MethodGet)
 	api := s.Router.PathPrefix("/api").Subrouter()
 
+	// middlewares
+	api.Use(s.logging)
+	// api.Use(s.handleCORS)
+	api.Use(s.secureHeaders)
+	// api.Use(s.apiKeyAuth)
+	api.Use(s.basicAuth)
+
+	ur := api.PathPrefix("/users").Subrouter()
 	br := api.PathPrefix("/books").Subrouter()
 	ar := api.PathPrefix("/authors").Subrouter()
+
+	ur.HandleFunc("/register", s.Register).Methods(http.MethodPost)
+	ur.HandleFunc("/login", s.Login).Methods(http.MethodPost)
+	ur.HandleFunc("/logout", s.Logout).Methods(http.MethodPost)
 
 	br.HandleFunc("/{id:[0-9]+}", s.GetBook).Methods(http.MethodGet)
 	br.HandleFunc("/", s.GetAllBooks).Methods(http.MethodGet)

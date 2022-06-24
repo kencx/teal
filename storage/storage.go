@@ -15,76 +15,73 @@ const (
 )
 
 type Store struct {
-	db     *sqlx.DB
-	Driver string
-	DSN    string
+	Books   *BookStore
+	Authors *AuthorStore
+	Users   *UserStore
 }
 
-func NewStore(driver string) *Store {
+func NewStore(db *sqlx.DB) *Store {
 	return &Store{
-		Driver: driver,
+		Books:   &BookStore{db},
+		Authors: &AuthorStore{db},
+		Users:   &UserStore{db},
 	}
 }
 
-func (r *Store) Open(path string) error {
-	if r.Driver == "" {
-		return fmt.Errorf("db: driver required")
-	}
-
-	if r.Driver != SQLITE && r.Driver != POSTGRES {
-		return fmt.Errorf("db: driver not supported")
-	}
-
-	r.DSN = path
-	if r.DSN == "" {
-		return fmt.Errorf("db: connection string required")
-	}
-
-	var err error
-	if r.db, err = sqlx.Open(r.Driver, r.DSN); err != nil {
-		return fmt.Errorf("db: failed to open: %w", err)
-	}
-	if err = r.db.Ping(); err != nil {
-		return fmt.Errorf("db: failed to connect: %w", err)
-	}
-	if err := r.createTable(); err != nil {
-		return err
-	}
-	return nil
+func (s *Store) GetDB() *sqlx.DB {
+	return s.Books.db
 }
 
-func (r *Store) Close() error {
-	if r.db != nil {
-		return r.db.Close()
+func Open(path string) (*sqlx.DB, error) {
+	if path == "" {
+		return nil, fmt.Errorf("db: connection string required")
 	}
-	return nil
+
+	db, err := sqlx.Open(SQLITE, path)
+	if err != nil {
+		return nil, fmt.Errorf("db: failed to open: %w", err)
+	}
+	if err = db.Ping(); err != nil {
+		return nil, fmt.Errorf("db: failed to connect: %w", err)
+	}
+	if err := createTable(db); err != nil {
+		return nil, err
+	}
+	return db, nil
 }
 
-func (r *Store) createTable() error {
-	_, err := r.db.Exec(CREATE_TABLES)
+func Close(db *sqlx.DB) error {
+	if db != nil {
+		return db.Close()
+	}
+	return fmt.Errorf("db: db is nil")
+}
+
+func createTable(db *sqlx.DB) error {
+	_, err := db.Exec(CREATE_TABLES)
 	if err != nil {
 		return fmt.Errorf("%v: %s", err, CREATE_TABLES)
 	}
 	return nil
 }
 
-func (r *Store) dropTable() error {
+func dropTable(db *sqlx.DB) error {
 
-	if _, err := r.db.Exec(DROP_ALL); err != nil {
+	if _, err := db.Exec(DROP_ALL); err != nil {
 		return fmt.Errorf("%v: %s", err, DROP_ALL)
 	}
 	return nil
 }
 
-func (r *Store) ExecFile(path string) error {
-	query, err := ioutil.ReadFile(path)
+func ExecFile(db *sqlx.DB, filePath string) error {
+	query, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return fmt.Errorf("db: cannot read sql file %q: %v", path, err)
+		return fmt.Errorf("db: cannot read sql file %q: %v", filePath, err)
 	}
 
-	if _, err := r.db.Exec(string(query)); err != nil {
+	if _, err := db.Exec(string(query)); err != nil {
 		return fmt.Errorf("%v", err)
 	}
-	log.Printf("File %s loaded", path)
+	log.Printf("File %s loaded", filePath)
 	return nil
 }

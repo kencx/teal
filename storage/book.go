@@ -10,28 +10,26 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/kencx/teal"
+	tcontext "github.com/kencx/teal/context"
 )
 
-type baseKey int
-
-const (
-	bookCtxKey baseKey = iota
-	authorCtxKey
-)
-
-type BookAuthorDest struct {
-	*teal.Book
-	Author_string string
+type BookStore struct {
+	db *sqlx.DB
 }
 
-func (s *Store) RetrieveBookWithID(id int) (*teal.Book, error) {
-	tx, err := s.db.Beginx()
+type BookModel struct {
+	*teal.Book
+	AuthorString string `db:"author_string"`
+}
+
+func (bs *BookStore) Get(id int) (*teal.Book, error) {
+	tx, err := bs.db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
 	}
 	defer endTx(tx, err)
 
-	var dest BookAuthorDest
+	var dest BookModel
 	stmt := `SELECT b.*, GROUP_CONCAT(a.name) AS author_string
 		FROM books b
 		INNER JOIN books_authors ba ON ba.book_id=b.id
@@ -47,18 +45,18 @@ func (s *Store) RetrieveBookWithID(id int) (*teal.Book, error) {
 		return nil, fmt.Errorf("db: retrieve book id %d failed: %v", id, err)
 	}
 
-	dest.Author = strings.Split(dest.Author_string, ",")
+	dest.Author = strings.Split(dest.AuthorString, ",")
 	return dest.Book, nil
 }
 
-func (s *Store) RetrieveBookWithISBN(isbn string) (*teal.Book, error) {
-	tx, err := s.db.Beginx()
+func (bs *BookStore) GetByISBN(isbn string) (*teal.Book, error) {
+	tx, err := bs.db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
 	}
 	defer endTx(tx, err)
 
-	var dest BookAuthorDest
+	var dest BookModel
 	stmt := `SELECT b.*, GROUP_CONCAT(a.name) AS author_string
 		FROM books b
 		INNER JOIN books_authors ba ON ba.book_id=b.id
@@ -74,18 +72,18 @@ func (s *Store) RetrieveBookWithISBN(isbn string) (*teal.Book, error) {
 		return nil, fmt.Errorf("db: retrieve book isbn %q failed: %v", isbn, err)
 	}
 
-	dest.Author = strings.Split(dest.Author_string, ",")
+	dest.Author = strings.Split(dest.AuthorString, ",")
 	return dest.Book, nil
 }
 
-func (s *Store) RetrieveBookWithTitle(title string) (*teal.Book, error) {
-	tx, err := s.db.Beginx()
+func (bs *BookStore) GetByTitle(title string) (*teal.Book, error) {
+	tx, err := bs.db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
 	}
 	defer endTx(tx, err)
 
-	var dest BookAuthorDest
+	var dest BookModel
 	stmt := `SELECT b.*, GROUP_CONCAT(a.name) AS author_string
 		FROM books b
 		INNER JOIN books_authors ba ON ba.book_id=b.id
@@ -101,18 +99,18 @@ func (s *Store) RetrieveBookWithTitle(title string) (*teal.Book, error) {
 		return nil, fmt.Errorf("db: retrieve book title %q failed: %v", title, err)
 	}
 
-	dest.Author = strings.Split(dest.Author_string, ",")
+	dest.Author = strings.Split(dest.AuthorString, ",")
 	return dest.Book, nil
 }
 
-func (s *Store) RetrieveAllBooks() ([]*teal.Book, error) {
-	tx, err := s.db.Beginx()
+func (bs *BookStore) GetAll() ([]*teal.Book, error) {
+	tx, err := bs.db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
 	}
 	defer endTx(tx, err)
 
-	var dest []BookAuthorDest
+	var dest []BookModel
 	stmt := `SELECT b.*, GROUP_CONCAT(a.name) AS author_string
 		FROM books b
 		INNER JOIN books_authors ba ON ba.book_id=b.id
@@ -135,7 +133,7 @@ func (s *Store) RetrieveAllBooks() ([]*teal.Book, error) {
 
 	var books []*teal.Book
 	for _, row := range dest {
-		row.Author = strings.Split(row.Author_string, ",")
+		row.Author = strings.Split(row.AuthorString, ",")
 		books = append(books, row.Book)
 	}
 	return books, nil
@@ -143,15 +141,15 @@ func (s *Store) RetrieveAllBooks() ([]*teal.Book, error) {
 
 // Create a book entry in books, author entries in authors and establishes the necessary
 // book author relationships
-func (s *Store) CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error) {
-	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
+func (bs *BookStore) Create(ctx context.Context, b *teal.Book) (*teal.Book, error) {
+	if err := Tx(bs.db, ctx, func(tx *sqlx.Tx) error {
 
 		book, err := insertBook(ctx, tx, b)
 		if err != nil {
 			return err
 		}
 		// save created entity to context to extract after transaction
-		ctx = context.WithValue(ctx, bookCtxKey, book)
+		ctx = tcontext.WithBook(ctx, book)
 
 		// create authors
 		authors := parseAuthors(b.Author)
@@ -171,10 +169,9 @@ func (s *Store) CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error
 		return nil, err
 	}
 
-	// TODO implement separate context package with type safe getters and setters
-	book, ok := ctx.Value(bookCtxKey).(*teal.Book)
-	if !ok {
-		return nil, fmt.Errorf("db: failed to cast book")
+	book, err := tcontext.GetBook(ctx)
+	if err != nil {
+		return nil, err
 	}
 	return book, nil
 }
@@ -182,8 +179,8 @@ func (s *Store) CreateBook(ctx context.Context, b *teal.Book) (*teal.Book, error
 // Update book details.
 // For authors, a new author row is created for each new author
 // No authors are deleted, unless it has no relationship with any books
-func (s *Store) UpdateBook(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
-	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
+func (bs *BookStore) Update(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
+	if err := Tx(bs.db, ctx, func(tx *sqlx.Tx) error {
 
 		book, err := updateBook(ctx, tx, id, b)
 		if err != nil {
@@ -217,22 +214,22 @@ func (s *Store) UpdateBook(ctx context.Context, id int, b *teal.Book) (*teal.Boo
 
 		// updated authors needs to be passed to the returned book
 		book.Author = b.Author
-		ctx = context.WithValue(ctx, bookCtxKey, book)
+		ctx = tcontext.WithBook(ctx, book)
 		return nil
 
 	}, &sql.TxOptions{}); err != nil {
 		return nil, err
 	}
 
-	book, ok := ctx.Value(bookCtxKey).(*teal.Book)
-	if !ok {
-		return nil, fmt.Errorf("db: failed to cast book")
+	book, err := tcontext.GetBook(ctx)
+	if err != nil {
+		return nil, err
 	}
 	return book, nil
 }
 
-func (s *Store) DeleteBook(ctx context.Context, id int) error {
-	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
+func (bs *BookStore) Delete(ctx context.Context, id int) error {
+	if err := Tx(bs.db, ctx, func(tx *sqlx.Tx) error {
 
 		err := deleteBook(tx, id)
 		if err != nil {

@@ -8,7 +8,12 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/kencx/teal"
+	tcontext "github.com/kencx/teal/context"
 )
+
+type AuthorStore struct {
+	db *sqlx.DB
+}
 
 func parseAuthors(authors []string) []*teal.Author {
 	var result []*teal.Author
@@ -20,7 +25,7 @@ func parseAuthors(authors []string) []*teal.Author {
 	return result
 }
 
-func (s *Store) RetrieveAuthorWithID(id int) (*teal.Author, error) {
+func (s *AuthorStore) Get(id int) (*teal.Author, error) {
 	tx, err := s.db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
@@ -39,7 +44,7 @@ func (s *Store) RetrieveAuthorWithID(id int) (*teal.Author, error) {
 	return &dest, nil
 }
 
-func (s *Store) RetrieveAuthorWithName(name string) (*teal.Author, error) {
+func (s *AuthorStore) GetByName(name string) (*teal.Author, error) {
 	tx, err := s.db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
@@ -58,7 +63,7 @@ func (s *Store) RetrieveAuthorWithName(name string) (*teal.Author, error) {
 	return &dest, nil
 }
 
-func (s *Store) RetrieveAllAuthors() ([]*teal.Author, error) {
+func (s *AuthorStore) GetAll() ([]*teal.Author, error) {
 	tx, err := s.db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
@@ -77,7 +82,7 @@ func (s *Store) RetrieveAllAuthors() ([]*teal.Author, error) {
 	return dest, nil
 }
 
-func (s *Store) RetrieveAllAuthorNames() ([]string, error) {
+func (s *AuthorStore) GetAllNames() ([]string, error) {
 	tx, err := s.db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
@@ -96,37 +101,33 @@ func (s *Store) RetrieveAllAuthorNames() ([]string, error) {
 	return dest, nil
 }
 
-func (s *Store) CreateAuthor(ctx context.Context, a *teal.Author) (*teal.Author, error) {
-	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
+func (s *AuthorStore) Create(ctx context.Context, a *teal.Author) (*teal.Author, error) {
+	if err := Tx(s.db, ctx, func(tx *sqlx.Tx) error {
 
 		id, err := insertOrGetAuthor(tx, a)
 		if err != nil {
 			return err
 		}
 		// save id to context for querying later
-		ctx = context.WithValue(ctx, authorCtxKey, id)
+		ctx = tcontext.WithAuthorID(ctx, id)
 		return nil
 
 	}, &sql.TxOptions{}); err != nil {
 		return nil, err
 	}
 
-	// TODO implement separate context package with type safe getters and setters
-	id, ok := ctx.Value(authorCtxKey).(int64)
-	if !ok {
-		return nil, fmt.Errorf("db: failed to cast author")
-	}
+	id, err := tcontext.GetAuthorID(ctx)
 
 	// query author after transaction committed
-	author, err := s.RetrieveAuthorWithID(int(id))
+	author, err := s.Get(int(id))
 	if err != nil {
 		return nil, err
 	}
 	return author, nil
 }
 
-func (s *Store) UpdateAuthor(ctx context.Context, id int, a *teal.Author) (*teal.Author, error) {
-	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
+func (s *AuthorStore) Update(ctx context.Context, id int, a *teal.Author) (*teal.Author, error) {
+	if err := Tx(s.db, ctx, func(tx *sqlx.Tx) error {
 
 		err := updateAuthor(tx, id, a)
 		if err != nil {
@@ -138,15 +139,15 @@ func (s *Store) UpdateAuthor(ctx context.Context, id int, a *teal.Author) (*teal
 		return nil, err
 	}
 
-	author, err := s.RetrieveAuthorWithID(int(id))
+	author, err := s.Get(int(id))
 	if err != nil {
 		return nil, err
 	}
 	return author, nil
 }
 
-func (s *Store) DeleteAuthor(ctx context.Context, id int) error {
-	if err := s.Tx(ctx, func(tx *sqlx.Tx) error {
+func (s *AuthorStore) Delete(ctx context.Context, id int) error {
+	if err := Tx(s.db, ctx, func(tx *sqlx.Tx) error {
 
 		err := deleteAuthor(tx, id)
 		if err != nil {

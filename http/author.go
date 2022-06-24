@@ -11,6 +11,14 @@ import (
 	"github.com/kencx/teal/util"
 )
 
+type AuthorStore interface {
+	Get(id int) (*teal.Author, error)
+	GetAll() ([]*teal.Author, error)
+	Create(ctx context.Context, b *teal.Author) (*teal.Author, error)
+	Update(ctx context.Context, id int, b *teal.Author) (*teal.Author, error)
+	Delete(ctx context.Context, id int) error
+}
+
 func (s *Server) GetAuthor(rw http.ResponseWriter, r *http.Request) {
 	id := HandleId(rw, r)
 	if id == -1 {

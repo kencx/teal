@@ -1,56 +1,32 @@
 package main
 
 import (
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/kencx/teal/author"
-	"github.com/kencx/teal/book"
+	"github.com/jmoiron/sqlx"
 	"github.com/kencx/teal/http"
 	"github.com/kencx/teal/storage"
 )
-
-func main() {
-
-	a := NewApp()
-	go a.Run(":9090")
-
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt)
-	signal.Notify(sigChan, syscall.SIGTERM)
-	<-sigChan
-	a.server.InfoLog.Println("Received terminate, shutting down...")
-
-	a.Close()
-	a.server.InfoLog.Println("Application gracefully stopped")
-}
 
 type App struct {
 	db     *storage.Store
 	server *http.Server
 }
 
-func NewApp() *App {
+func NewApp(db *sqlx.DB) *App {
 	return &App{
-		db:     storage.NewStore("sqlite3"),
+		db:     storage.NewStore(db),
 		server: http.NewServer(),
 	}
 }
 
 func (a *App) Run(port string) error {
 
-	a.db.Open("./test.db")
-	if err := a.db.ExecFile("../testdata/schema.sql"); err != nil {
-		return err
-	}
-	if err := a.db.ExecFile("../../storage/testdata.sql"); err != nil {
-		return err
-	}
-	a.server.InfoLog.Println("Database connection successfully established!")
-
-	a.server.Books = book.NewService(a.db)
-	a.server.Authors = author.NewService(a.db)
+	a.server.Books = a.db.Books
+	a.server.Authors = a.db.Authors
 
 	if err := a.server.Run(port); err != nil {
 		return err
@@ -59,8 +35,9 @@ func (a *App) Run(port string) error {
 }
 
 func (a *App) Close() error {
-	if a.db != nil {
-		if err := a.db.Close(); err != nil {
+	db := a.db.GetDB()
+	if db != nil {
+		if err := storage.Close(db); err != nil {
 			return err
 		}
 		a.server.InfoLog.Println("Database connection closed")
@@ -72,4 +49,35 @@ func (a *App) Close() error {
 		a.server.InfoLog.Println("Server connection closed")
 	}
 	return nil
+}
+
+func main() {
+
+	db, err := storage.Open("./test.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// init test data
+	if err := storage.ExecFile(db, "../testdata/schema.sql"); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := storage.ExecFile(db, "../../storage/testdata.sql"); err != nil {
+		log.Fatal(err)
+	}
+
+	app := NewApp(db)
+	app.server.InfoLog.Println("Database connection successfully established!")
+
+	go app.Run(":9090")
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt)
+	signal.Notify(sigChan, syscall.SIGTERM)
+	<-sigChan
+	app.server.InfoLog.Println("Received terminate, shutting down...")
+
+	app.Close()
+	app.server.InfoLog.Println("Application gracefully stopped")
 }

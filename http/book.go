@@ -14,6 +14,17 @@ import (
 	"github.com/kencx/teal/util"
 )
 
+type BookStore interface {
+	Get(id int) (*teal.Book, error)
+	GetByTitle(title string) (*teal.Book, error)
+	GetAll() ([]*teal.Book, error)
+	Create(ctx context.Context, b *teal.Book) (*teal.Book, error)
+	Update(ctx context.Context, id int, b *teal.Book) (*teal.Book, error)
+	Delete(ctx context.Context, id int) error
+
+	GetByAuthor(name string) ([]*teal.Book, error)
+}
+
 func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 	id := HandleId(rw, r)
 	if id == -1 {

@@ -9,8 +9,8 @@ import (
 )
 
 // get list of author names from given isbn
-func (s *Store) RetrieveAuthorsFromBook(book_isbn string) ([]string, error) {
-	tx, err := s.db.Beginx()
+func (bs *BookStore) GetAuthorsFromBook(book_isbn string) ([]string, error) {
+	tx, err := bs.db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
 	}
@@ -37,13 +37,13 @@ func (s *Store) RetrieveAuthorsFromBook(book_isbn string) ([]string, error) {
 	return authors, nil
 }
 
-func (s *Store) RetrieveBooksFromAuthor(name string) ([]*teal.Book, error) {
-	tx, err := s.db.Beginx()
+func (bs *BookStore) GetByAuthor(name string) ([]*teal.Book, error) {
+	tx, err := bs.db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
 	}
 	defer endTx(tx, err)
-	var dest []BookAuthorDest
+	var dest []BookModel
 
 	stmt := `SELECT b.*, group_concat(a.name) as author_string
 		FROM books_authors ba
@@ -62,7 +62,7 @@ func (s *Store) RetrieveBooksFromAuthor(name string) ([]*teal.Book, error) {
 	var result []*teal.Book
 	for _, v := range dest {
 		r := v.Book
-		r.Author = strings.Split(v.Author_string, ",")
+		r.Author = strings.Split(v.AuthorString, ",")
 		result = append(result, r)
 	}
 

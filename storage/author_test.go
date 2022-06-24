@@ -8,8 +8,8 @@ import (
 	"github.com/kencx/teal"
 )
 
-func TestRetrieveAuthorWithID(t *testing.T) {
-	got, err := db.RetrieveAuthorWithID(testAuthor1.ID)
+func TestGetAuthor(t *testing.T) {
+	got, err := ts.Authors.Get(testAuthor1.ID)
 	checkErr(t, err)
 
 	want := testAuthor1
@@ -18,8 +18,8 @@ func TestRetrieveAuthorWithID(t *testing.T) {
 	}
 }
 
-func TestRetrieveAuthorWithName(t *testing.T) {
-	got, err := db.RetrieveAuthorWithName(testAuthor2.Name)
+func TestGetAuthorWithName(t *testing.T) {
+	got, err := ts.Authors.GetByName(testAuthor2.Name)
 	checkErr(t, err)
 
 	want := testAuthor2
@@ -28,8 +28,8 @@ func TestRetrieveAuthorWithName(t *testing.T) {
 	}
 }
 
-func TestRetrieveAuthorNotExists(t *testing.T) {
-	result, err := db.RetrieveAuthorWithID(-1)
+func TestGetAuthorNotExists(t *testing.T) {
+	result, err := ts.Authors.Get(-1)
 	if err == nil {
 		t.Fatalf("expected error: ErrDoesNotExist")
 	}
@@ -43,8 +43,8 @@ func TestRetrieveAuthorNotExists(t *testing.T) {
 	}
 }
 
-func TestRetrieveAllAuthors(t *testing.T) {
-	got, err := db.RetrieveAllAuthors()
+func TestGetAllAuthors(t *testing.T) {
+	got, err := ts.Authors.GetAll()
 	checkErr(t, err)
 
 	want := []*teal.Author{testAuthor1, testAuthor2, testAuthor3, testAuthor4, testAuthor5}
@@ -59,9 +59,9 @@ func TestRetrieveAllAuthors(t *testing.T) {
 }
 
 // TODO
-// func TestRetrieveAllAuthorEmpty(t *testing.T) {
+// func TestGetAllAuthorEmpty(t *testing.T) {
 // 	// delete all entries
-// 	got, err := db.RetrieveAllAuthors()
+// 	got, err := ts.Authors.GetAll()
 //
 // 	if err == nil {
 // 		t.Fatalf("expected error: ErrNoRows")
@@ -80,7 +80,7 @@ func TestCreateAuthor(t *testing.T) {
 
 	want := &teal.Author{Name: "FooBar"}
 
-	got, err := db.CreateAuthor(context.Background(), want)
+	got, err := ts.Authors.Create(context.Background(), want)
 	checkErr(t, err)
 
 	if got.Name != want.Name {
@@ -90,7 +90,7 @@ func TestCreateAuthor(t *testing.T) {
 
 func TestInsertAuthorDuplicates(t *testing.T) {
 
-	tx, err := db.db.Beginx()
+	tx, err := ts.Authors.db.Beginx()
 	if err != nil {
 		t.Errorf("db: failed to start transaction: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestUpdateAuthor(t *testing.T) {
 	want := testAuthor1
 	want.Name = "John Watson"
 
-	got, err := db.UpdateAuthor(context.Background(), want.ID, want)
+	got, err := ts.Authors.Update(context.Background(), want.ID, want)
 	checkErr(t, err)
 
 	if got.Name != want.Name {
@@ -132,7 +132,7 @@ func TestUpdateAuthorExisting(t *testing.T) {
 	want := testAuthor1
 	want.Name = "John Doe"
 
-	_, err := db.UpdateAuthor(context.Background(), want.ID, want)
+	_, err := ts.Authors.Update(context.Background(), want.ID, want)
 	if err == nil {
 		t.Errorf("expected error: unique constraint Name")
 	}
@@ -140,15 +140,15 @@ func TestUpdateAuthorExisting(t *testing.T) {
 
 func TestDeleteAuthor(t *testing.T) {
 
-	err := db.DeleteAuthor(context.Background(), testAuthor1.ID)
+	err := ts.Authors.Delete(context.Background(), testAuthor1.ID)
 	checkErr(t, err)
 
-	_, err = db.RetrieveAuthorWithID(testAuthor1.ID)
+	_, err = ts.Authors.Get(testAuthor1.ID)
 	if err == nil {
 		t.Errorf("expected error, author %d not deleted", testAuthor1.ID)
 	}
 
-	tx, err := db.db.Beginx()
+	tx, err := ts.Authors.db.Beginx()
 	if err != nil {
 		t.Errorf("db: failed to start transaction: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestDeleteAuthor(t *testing.T) {
 }
 
 func TestDeleteAuthorNotExists(t *testing.T) {
-	err := db.DeleteAuthor(context.Background(), testAuthor1.ID)
+	err := ts.Authors.Delete(context.Background(), testAuthor1.ID)
 	if err == nil {
 		t.Errorf("expected error: author not exists")
 	}

@@ -1,41 +1,57 @@
 package http
 
 import (
-	"io"
 	"net/http"
 
-	"github.com/kencx/teal"
 	"github.com/kencx/teal/http/response"
-	"github.com/kencx/teal/util"
 )
 
-func (s Server) MiddlewareBookValidation(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		book := teal.Book{}
-
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			response.Error(rw, r, err)
-			return
-		}
-		err = util.FromJSON(body, &book)
-		if err != nil {
-			response.Error(rw, r, err)
-			return
-		}
-
-		verrs := book.Validate()
-		if len(verrs) > 0 {
-			// s.ErrLog.Println(verrs)
-			response.ValidationError(rw, r, verrs)
-			return
-		}
-
-		// add book to context
-		// ctx := context.WithValue(r.Context(), KeyBook{}, book)
-		// r = r.WithContext(ctx)
-
-		// call next handler
-		next.ServeHTTP(rw, r)
+func (s *Server) logging(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.InfoLog.Printf("%s - %s %s %s", r.RemoteAddr, r.Proto, r.Method, r.URL)
+		next.ServeHTTP(w, r)
 	})
 }
+
+func (s *Server) secureHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Frame-Options", "deny")
+		w.Header().Set("X-XSS-Protection", "1; mode=block")
+
+		// cookies
+		w.Header().Set("Set-Cookie", "Secure; HttpOnly")
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// func (s *Server) handleCORS(next http.Handler) http.Handler {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//
+// 	})
+// }
+
+func (s *Server) basicAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		user, pass, ok := r.BasicAuth()
+		if !ok {
+			response.Unauthorized(w, r, []byte("No authentication headers"))
+			return
+		}
+
+		if !s.checkUser(user, pass) {
+			response.Unauthorized(w, r, []byte("Invalid username or password"))
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// func (s *Server) apiKeyAuth(next http.Handler) http.Handler {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//
+// 		next.ServeHTTP(w, r)
+// 	})
+// }

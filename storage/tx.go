@@ -9,8 +9,8 @@ import (
 )
 
 // functional Tx helper for Exec statements
-func (s *Store) Tx(ctx context.Context, fn func(tx *sqlx.Tx) error, opts *sql.TxOptions) error {
-	tx, err := s.db.BeginTxx(ctx, opts)
+func Tx(db *sqlx.DB, ctx context.Context, fn func(tx *sqlx.Tx) error, opts *sql.TxOptions) error {
+	tx, err := db.BeginTxx(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("db: failed to start transaction: %v", err)
 	}
