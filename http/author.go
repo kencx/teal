@@ -32,13 +32,13 @@ func (s *Server) GetAuthor(rw http.ResponseWriter, r *http.Request) {
 		return
 
 	} else if err != nil {
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	res, err := util.ToJSON(a)
 	if err != nil {
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
@@ -55,13 +55,13 @@ func (s *Server) GetAllAuthors(rw http.ResponseWriter, r *http.Request) {
 		return
 
 	} else if err != nil {
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	res, err := util.ToJSON(b)
 	if err != nil {
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (s *Server) AddAuthor(rw http.ResponseWriter, r *http.Request) {
 	var author teal.Author
 	err := json.NewDecoder(r.Body).Decode(&author)
 	if err != nil {
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
@@ -93,14 +93,14 @@ func (s *Server) AddAuthor(rw http.ResponseWriter, r *http.Request) {
 	result, err := s.Authors.Create(ctx, &author)
 	if err != nil {
 		s.ErrLog.Print(err)
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	body, err := util.ToJSON(result)
 	if err != nil {
 		s.ErrLog.Println(err)
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 	s.InfoLog.Printf("Author %v created", result)
@@ -117,7 +117,7 @@ func (s *Server) UpdateAuthor(rw http.ResponseWriter, r *http.Request) {
 	var author teal.Author
 	err := json.NewDecoder(r.Body).Decode(&author)
 	if err != nil {
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
@@ -135,18 +135,18 @@ func (s *Server) UpdateAuthor(rw http.ResponseWriter, r *http.Request) {
 
 	result, err := s.Authors.Update(ctx, id, &author)
 	if err == teal.ErrDoesNotExist {
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 	if err != nil {
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	body, err := util.ToJSON(result)
 	if err != nil {
 		s.ErrLog.Println(err)
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
@@ -162,13 +162,13 @@ func (s *Server) DeleteAuthor(rw http.ResponseWriter, r *http.Request) {
 
 	err := s.Authors.Delete(r.Context(), id)
 	if err == teal.ErrDoesNotExist {
-		http.Error(rw, "Author not found", http.StatusNotFound)
+		response.NotFound(rw, r, err)
 		return
 	}
 
 	if err != nil {
 		s.ErrLog.Println(err)
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 

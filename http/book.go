@@ -38,13 +38,13 @@ func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 		return
 
 	} else if err != nil {
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	res, err := util.ToJSON(b)
 	if err != nil {
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
@@ -74,13 +74,13 @@ func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
 		return
 
 	} else if err != nil {
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	res, err := util.ToJSON(b)
 	if err != nil {
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
@@ -94,7 +94,7 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 	var book teal.Book
 	err := json.NewDecoder(r.Body).Decode(&book)
 	if err != nil {
-		response.Error(rw, r, err)
+		response.BadRequest(rw, r, err)
 		return
 	}
 
@@ -112,14 +112,14 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 	result, err := s.Books.Create(ctx, &book)
 	if err != nil {
 		s.ErrLog.Print(err)
-		response.Error(rw, r, err)
+		response.BadRequest(rw, r, err)
 		return
 	}
 
 	body, err := util.ToJSON(result)
 	if err != nil {
 		s.ErrLog.Println(err)
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 	s.InfoLog.Printf("Book %v created", result)
@@ -136,7 +136,7 @@ func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
 	var book teal.Book
 	err := json.NewDecoder(r.Body).Decode(&book)
 	if err != nil {
-		response.Error(rw, r, err)
+		response.BadRequest(rw, r, err)
 		return
 	}
 
@@ -154,18 +154,18 @@ func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
 
 	result, err := s.Books.Update(ctx, id, &book)
 	if err == teal.ErrDoesNotExist {
-		response.Error(rw, r, err)
+		response.NotFound(rw, r, err)
 		return
 	}
 	if err != nil {
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	body, err := util.ToJSON(result)
 	if err != nil {
 		s.ErrLog.Println(err)
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
@@ -181,13 +181,13 @@ func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
 
 	err := s.Books.Delete(r.Context(), id)
 	if err == teal.ErrDoesNotExist {
-		http.Error(rw, "Book not found", http.StatusNotFound)
+		response.NotFound(rw, r, err)
 		return
 	}
 
 	if err != nil {
 		s.ErrLog.Println(err)
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 		return
 	}
 
@@ -200,7 +200,7 @@ func HandleId(rw http.ResponseWriter, r *http.Request) int {
 
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		response.Error(rw, r, fmt.Errorf("unable to process id: %v", err))
+		response.BadRequest(rw, r, fmt.Errorf("unable to process id: %v", err))
 		return -1
 	}
 

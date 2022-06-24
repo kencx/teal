@@ -20,7 +20,7 @@ func (s *Server) Healthcheck(rw http.ResponseWriter, r *http.Request) {
 
 	res, err := util.ToJSON(h)
 	if err != nil {
-		response.Error(rw, r, err)
+		response.InternalServerError(rw, r, err)
 	}
 
 	response.OK(rw, r, res)
