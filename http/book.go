@@ -2,7 +2,6 @@ package http
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/kencx/teal"
+	"github.com/kencx/teal/http/request"
 	"github.com/kencx/teal/http/response"
 	"github.com/kencx/teal/util"
 )
@@ -92,7 +92,7 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 
 	// marshal payload to struct
 	var book teal.Book
-	err := json.NewDecoder(r.Body).Decode(&book)
+	err := request.Read(rw, r, &book)
 	if err != nil {
 		response.BadRequest(rw, r, err)
 		return
@@ -134,7 +134,7 @@ func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
 
 	// marshal payload to struct
 	var book teal.Book
-	err := json.NewDecoder(r.Body).Decode(&book)
+	err := request.Read(rw, r, &book)
 	if err != nil {
 		response.BadRequest(rw, r, err)
 		return

@@ -74,7 +74,7 @@ func (s *Server) RegisterRoutes() {
 	// api.Use(s.handleCORS)
 	api.Use(s.secureHeaders)
 	// api.Use(s.apiKeyAuth)
-	api.Use(s.basicAuth)
+	// api.Use(s.basicAuth)
 
 	ur := api.PathPrefix("/users").Subrouter()
 	br := api.PathPrefix("/books").Subrouter()

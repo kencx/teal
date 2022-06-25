@@ -2,11 +2,11 @@ package http
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/kencx/teal"
+	"github.com/kencx/teal/http/request"
 	"github.com/kencx/teal/http/response"
 	"github.com/kencx/teal/util"
 )
@@ -73,7 +73,7 @@ func (s *Server) AddAuthor(rw http.ResponseWriter, r *http.Request) {
 
 	// marshal payload to struct
 	var author teal.Author
-	err := json.NewDecoder(r.Body).Decode(&author)
+	err := request.Read(rw, r, &author)
 	if err != nil {
 		response.InternalServerError(rw, r, err)
 		return
@@ -115,7 +115,7 @@ func (s *Server) UpdateAuthor(rw http.ResponseWriter, r *http.Request) {
 
 	// marshal payload to struct
 	var author teal.Author
-	err := json.NewDecoder(r.Body).Decode(&author)
+	err := request.Read(rw, r, &author)
 	if err != nil {
 		response.InternalServerError(rw, r, err)
 		return
