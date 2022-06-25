@@ -1,5 +1,5 @@
 build:
-	cd cmd/teal && go build .
+	cd cmd/teal && go build -v .
 
 run:
 	cd cmd/teal && ./teal
@@ -10,3 +10,6 @@ sqlite:
 cover:
 	go test ./... -coverprofile cover.out
 	go tool cover -html=cover.out
+
+test:
+	go test -race ./...
