@@ -12,6 +12,7 @@ import (
 	"github.com/kencx/teal/http/request"
 	"github.com/kencx/teal/http/response"
 	"github.com/kencx/teal/util"
+	"github.com/kencx/teal/validator"
 )
 
 type BookStore interface {
@@ -23,6 +24,11 @@ type BookStore interface {
 	Delete(ctx context.Context, id int) error
 
 	GetByAuthor(name string) ([]*teal.Book, error)
+}
+
+func hasQueryParam(param string, r *http.Request) bool {
+	p := r.URL.Query().Get(param)
+	return p != ""
 }
 
 func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
@@ -42,7 +48,7 @@ func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := util.ToJSON(b)
+	res, err := util.ToJSON(response.Envelope{"books": b})
 	if err != nil {
 		response.InternalServerError(rw, r, err)
 		return
@@ -50,11 +56,6 @@ func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 
 	s.InfoLog.Printf("Book %d returned", id)
 	response.OK(rw, r, res)
-}
-
-func hasQueryParam(param string, r *http.Request) bool {
-	p := r.URL.Query().Get(param)
-	return p != ""
 }
 
 func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
@@ -78,7 +79,7 @@ func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := util.ToJSON(b)
+	res, err := util.ToJSON(response.Envelope{"books": b})
 	if err != nil {
 		response.InternalServerError(rw, r, err)
 		return
@@ -98,11 +99,10 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// validate payload
-	verrs := book.Validate()
-	if len(verrs) > 0 {
-		// log
-		response.ValidationError(rw, r, verrs)
+	v := validator.New()
+	book.Validate(v)
+	if !v.Valid() {
+		response.ValidationError(rw, r, v.Errors)
 		return
 	}
 
@@ -116,7 +116,7 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := util.ToJSON(result)
+	body, err := util.ToJSON(response.Envelope{"books": result})
 	if err != nil {
 		s.ErrLog.Println(err)
 		response.InternalServerError(rw, r, err)
@@ -142,10 +142,10 @@ func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
 
 	// validate payload
 	// PUT should require all fields
-	verrs := book.Validate()
-	if len(verrs) > 0 {
-		// log
-		response.ValidationError(rw, r, verrs)
+	v := validator.New()
+	book.Validate(v)
+	if !v.Valid() {
+		response.ValidationError(rw, r, v.Errors)
 		return
 	}
 
@@ -162,7 +162,7 @@ func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := util.ToJSON(result)
+	body, err := util.ToJSON(response.Envelope{"books": result})
 	if err != nil {
 		s.ErrLog.Println(err)
 		response.InternalServerError(rw, r, err)

@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"regexp"
+
+	"github.com/kencx/teal/validator"
 )
 
 type Book struct {
@@ -51,43 +53,18 @@ func (n NullString) UnmarshalJSON(data []byte) error {
 // 		b.ID, b.Title, b.Description, b.Author, b.ISBN, b.DateAdded, b.DateUpdated, b.DateCompleted)
 // }
 
-func (b *Book) Validate() []*ValidationError {
-	var verrs []*ValidationError
+var IsbnRgx = regexp.MustCompile(`[0-9]+`)
 
-	if b.Title == "" {
-		verrs = append(verrs, NewValidationError("title", "value is missing"))
-	}
-	if verr := validateAuthor(b.Author); verr != nil {
-		verrs = append(verrs, verr)
-	}
-	if verr := validateISBN(b.ISBN); verr != nil {
-		verrs = append(verrs, verr)
-	}
-	return verrs
-}
+func (b *Book) Validate(v *validator.Validator) {
+	v.Check(b.Title != "", "title", "value is missing")
 
-func validateAuthor(authors []string) *ValidationError {
-	if len(authors) == 0 {
-		return NewValidationError("author", "value is missing")
-	}
+	v.Check(len(b.Author) != 0, "author", "value is missing")
 
-	if len(authors) == 1 && authors[0] == "" {
-		return NewValidationError("author", "value is missing")
-	}
+	v.Check(b.ISBN != "", "isbn", "value is missing")
+	v.Check(validator.Matches(b.ISBN, IsbnRgx), "isbn", "incorrect format")
 
-	return nil
-}
+	v.Check(b.NumOfPages >= 0, "numOfPages", "must be >= 0")
 
-func validateISBN(isbn string) *ValidationError {
-	if isbn == "" {
-		return NewValidationError("isbn", "value is missing")
-	}
-
-	// TODO isbn regex
-	re := regexp.MustCompile(`[0-9]+`)
-	matches := re.FindAllString(isbn, -1)
-	if len(matches) != 1 {
-		return NewValidationError("isbn", "incorrect format")
-	}
-	return nil
+	v.Check(b.Rating >= 0, "rating", "must be >= 0")
+	v.Check(b.Rating <= 10, "rating", "must be <= 10")
 }

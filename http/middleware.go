@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/kencx/teal/http/response"
@@ -31,17 +32,22 @@ func (s *Server) secureHeaders(next http.Handler) http.Handler {
 // 	})
 // }
 
+var (
+	errNoAuthHeader = errors.New("no authentication headers")
+	errInvalidCreds = errors.New("invalid username or password")
+)
+
 func (s *Server) basicAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		user, pass, ok := r.BasicAuth()
 		if !ok {
-			response.Unauthorized(w, r, []byte("No authentication headers"))
+			response.Unauthorized(w, r, errNoAuthHeader)
 			return
 		}
 
 		if !s.checkUser(user, pass) {
-			response.Unauthorized(w, r, []byte("Invalid username or password"))
+			response.Unauthorized(w, r, errInvalidCreds)
 			return
 		}
 

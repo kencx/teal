@@ -26,7 +26,7 @@ func TestGetAuthor(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Authors: &mock.AuthorService{
+		Authors: &mock.AuthorStore{
 			GetAuthorFn: func(id int) (*teal.Author, error) {
 				return testAuthor1, nil
 			},
@@ -36,10 +36,11 @@ func TestGetAuthor(t *testing.T) {
 	w, err := getResponse("/api/authors/1", s.GetAuthor)
 	checkErr(t, err)
 
-	var got teal.Author
-	err = json.NewDecoder(w.Body).Decode(&got)
+	var env map[string]*teal.Author
+	err = json.NewDecoder(w.Body).Decode(&env)
 	checkErr(t, err)
 
+	got := env["authors"]
 	assertEqual(t, got.Name, testAuthor1.Name)
 	assertEqual(t, w.Code, http.StatusOK)
 	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
@@ -49,7 +50,7 @@ func TestGetAllAuthors(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Authors: &mock.AuthorService{
+		Authors: &mock.AuthorStore{
 			GetAllAuthorsFn: func() ([]*teal.Author, error) {
 				return testAuthors, nil
 			},
@@ -59,10 +60,11 @@ func TestGetAllAuthors(t *testing.T) {
 	w, err := getResponse("/api/authors/", s.GetAllAuthors)
 	checkErr(t, err)
 
-	var got []*teal.Author
-	err = json.NewDecoder(w.Body).Decode(&got)
+	var env map[string][]*teal.Author
+	err = json.NewDecoder(w.Body).Decode(&env)
 	checkErr(t, err)
 
+	got := env["authors"]
 	for i, v := range got {
 		assertEqual(t, v.Name, testAuthors[i].Name)
 	}
@@ -77,7 +79,7 @@ func TestAddAuthor(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Authors: &mock.AuthorService{
+		Authors: &mock.AuthorStore{
 			CreateAuthorFn: func(ctx context.Context, a *teal.Author) (*teal.Author, error) {
 				return testAuthor1, nil
 			},
@@ -87,10 +89,11 @@ func TestAddAuthor(t *testing.T) {
 	w, err := postResponse("/api/authors/", bytes.NewBuffer(want), s.AddAuthor)
 	checkErr(t, err)
 
-	var got teal.Author
-	err = json.NewDecoder(w.Body).Decode(&got)
+	var env map[string]*teal.Author
+	err = json.NewDecoder(w.Body).Decode(&env)
 	checkErr(t, err)
 
+	got := env["authors"]
 	assertEqual(t, got.Name, testAuthor1.Name)
 	assertEqual(t, w.Code, http.StatusCreated)
 	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
@@ -103,7 +106,7 @@ func TestUpdateAuthor(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Authors: &mock.AuthorService{
+		Authors: &mock.AuthorStore{
 			UpdateAuthorFn: func(ctx context.Context, id int, a *teal.Author) (*teal.Author, error) {
 				return testAuthor2, nil
 			},
@@ -113,10 +116,11 @@ func TestUpdateAuthor(t *testing.T) {
 	w, err := putResponse("/api/authors/1", bytes.NewBuffer(want), s.UpdateAuthor)
 	checkErr(t, err)
 
-	var got teal.Author
-	err = json.NewDecoder(w.Body).Decode(&got)
+	var env map[string]*teal.Author
+	err = json.NewDecoder(w.Body).Decode(&env)
 	checkErr(t, err)
 
+	got := env["authors"]
 	assertEqual(t, got.Name, testAuthor2.Name)
 	assertEqual(t, w.Code, http.StatusOK)
 	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
@@ -126,7 +130,7 @@ func TestDeleteAuthor(t *testing.T) {
 	s := Server{
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
-		Authors: &mock.AuthorService{
+		Authors: &mock.AuthorStore{
 			DeleteAuthorFn: func(ctx context.Context, id int) error {
 				return nil
 			},

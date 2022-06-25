@@ -1,6 +1,10 @@
 package teal
 
-import "time"
+import (
+	"time"
+
+	"github.com/kencx/teal/validator"
+)
 
 type User struct {
 	ID             int    `json:"id"`
@@ -22,6 +26,9 @@ func (u *User) UpdateLastLogin() {
 	u.LastLogin = time.Now()
 }
 
-func (u *User) Validate() []*ValidationError {
-	return nil
+func (u *User) Validate(v *validator.Validator) {
+	v.Check(u.Name != "", "name", "value is missing")
+	v.Check(u.Username != "", "username", "value is missing")
+	// TODO check password before hashing
+	v.Check(u.Email != "", "email", "value is missing")
 }

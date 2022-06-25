@@ -9,6 +9,7 @@ import (
 	"github.com/kencx/teal/http/request"
 	"github.com/kencx/teal/http/response"
 	"github.com/kencx/teal/util"
+	"github.com/kencx/teal/validator"
 )
 
 type AuthorStore interface {
@@ -36,7 +37,7 @@ func (s *Server) GetAuthor(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := util.ToJSON(a)
+	res, err := util.ToJSON(response.Envelope{"authors": a})
 	if err != nil {
 		response.InternalServerError(rw, r, err)
 		return
@@ -48,7 +49,7 @@ func (s *Server) GetAuthor(rw http.ResponseWriter, r *http.Request) {
 
 func (s *Server) GetAllAuthors(rw http.ResponseWriter, r *http.Request) {
 
-	b, err := s.Authors.GetAll()
+	a, err := s.Authors.GetAll()
 	if err == teal.ErrNoRows {
 		s.InfoLog.Println("No authors found")
 		response.NoContent(rw, r)
@@ -59,13 +60,13 @@ func (s *Server) GetAllAuthors(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := util.ToJSON(b)
+	res, err := util.ToJSON(response.Envelope{"authors": a})
 	if err != nil {
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	s.InfoLog.Printf("%d authors returned", len(b))
+	s.InfoLog.Printf("%d authors returned", len(a))
 	response.OK(rw, r, res)
 }
 
@@ -80,10 +81,10 @@ func (s *Server) AddAuthor(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	// validate payload
-	verr := author.Validate()
-	if verr != nil {
-		// log
-		response.ValidationError(rw, r, []*teal.ValidationError{verr})
+	v := validator.New()
+	author.Validate(v)
+	if !v.Valid() {
+		response.ValidationError(rw, r, v.Errors)
 		return
 	}
 
@@ -97,7 +98,7 @@ func (s *Server) AddAuthor(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := util.ToJSON(result)
+	body, err := util.ToJSON(response.Envelope{"authors": result})
 	if err != nil {
 		s.ErrLog.Println(err)
 		response.InternalServerError(rw, r, err)
@@ -123,10 +124,10 @@ func (s *Server) UpdateAuthor(rw http.ResponseWriter, r *http.Request) {
 
 	// validate payload
 	// PUT should require all fields
-	verr := author.Validate()
-	if verr != nil {
-		// log
-		response.ValidationError(rw, r, []*teal.ValidationError{verr})
+	v := validator.New()
+	author.Validate(v)
+	if !v.Valid() {
+		response.ValidationError(rw, r, v.Errors)
 		return
 	}
 
@@ -143,7 +144,7 @@ func (s *Server) UpdateAuthor(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := util.ToJSON(result)
+	body, err := util.ToJSON(response.Envelope{"authors": result})
 	if err != nil {
 		s.ErrLog.Println(err)
 		response.InternalServerError(rw, r, err)

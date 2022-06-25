@@ -9,6 +9,7 @@ import (
 	"github.com/kencx/teal/http/request"
 	"github.com/kencx/teal/http/response"
 	"github.com/kencx/teal/util"
+	"github.com/kencx/teal/validator"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,10 +28,10 @@ func (s *Server) Register(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	// validate payload
-	verrs := user.Validate()
-	if len(verrs) > 0 {
-		// log
-		response.ValidationError(rw, r, verrs)
+	v := validator.New()
+	user.Validate(v)
+	if !v.Valid() {
+		response.ValidationError(rw, r, v.Errors)
 		return
 	}
 
@@ -43,7 +44,7 @@ func (s *Server) Register(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := util.ToJSON(result)
+	body, err := util.ToJSON(response.Envelope{"user": result})
 	if err != nil {
 		s.ErrLog.Println(err)
 		response.InternalServerError(rw, r, err)

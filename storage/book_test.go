@@ -174,7 +174,7 @@ func TestCreateBookExistingAuthor(t *testing.T) {
 	defer endTx(tx, err)
 
 	// check books authors table should have two entries for john doe
-	books, err := ts.Books.GetBooksFromAuthor(want.Author[0])
+	books, err := ts.Books.GetByAuthor(want.Author[0])
 	checkErr(t, err)
 
 	if len(books) != 2 {
@@ -205,7 +205,7 @@ func TestCreateBookNewAndExistingAuthor(t *testing.T) {
 
 	num := []int{2, 1}
 	for i, v := range want.Author {
-		books, err := ts.Books.GetBooksFromAuthor(v)
+		books, err := ts.Books.GetByAuthor(v)
 		checkErr(t, err)
 
 		if len(books) != num[i] {

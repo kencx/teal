@@ -6,7 +6,7 @@ import (
 	"github.com/kencx/teal"
 )
 
-type BookService struct {
+type BookStore struct {
 	GetAllBooksFn    func() ([]*teal.Book, error)
 	GetBookFn        func(id int) (*teal.Book, error)
 	GetBookByTitleFn func(title string) (*teal.Book, error)
@@ -16,7 +16,7 @@ type BookService struct {
 	GetByAuthorFn    func(name string) ([]*teal.Book, error)
 }
 
-type AuthorService struct {
+type AuthorStore struct {
 	GetAuthorFn     func(id int) (*teal.Author, error)
 	GetAllAuthorsFn func() ([]*teal.Author, error)
 	CreateAuthorFn  func(ctx context.Context, a *teal.Author) (*teal.Author, error)
@@ -24,54 +24,54 @@ type AuthorService struct {
 	DeleteAuthorFn  func(ctx context.Context, id int) error
 }
 
-func (m *BookService) Get(id int) (*teal.Book, error) {
+func (m *BookStore) Get(id int) (*teal.Book, error) {
 	return m.GetBookFn(id)
 }
 
-func (m *BookService) GetByTitle(title string) (*teal.Book, error) {
+func (m *BookStore) GetByTitle(title string) (*teal.Book, error) {
 	return m.GetBookByTitleFn(title)
 }
 
-func (m *BookService) GetAll() ([]*teal.Book, error) {
+func (m *BookStore) GetAll() ([]*teal.Book, error) {
 	return m.GetAllBooksFn()
 }
 
-func (m *BookService) Create(ctx context.Context, b *teal.Book) (*teal.Book, error) {
+func (m *BookStore) Create(ctx context.Context, b *teal.Book) (*teal.Book, error) {
 	return m.CreateBookFn(ctx, b)
 }
 
-func (m *BookService) Update(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
+func (m *BookStore) Update(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
 	return m.UpdateBookFn(ctx, id, b)
 }
 
-func (m *BookService) Delete(ctx context.Context, id int) error {
+func (m *BookStore) Delete(ctx context.Context, id int) error {
 	return m.DeleteBookFn(ctx, id)
 }
 
-func (m *BookService) GetByAuthor(name string) ([]*teal.Book, error) {
+func (m *BookStore) GetByAuthor(name string) ([]*teal.Book, error) {
 	return m.GetByAuthorFn(name)
 }
 
-func (m *AuthorService) Get(id int) (*teal.Author, error) {
+func (m *AuthorStore) Get(id int) (*teal.Author, error) {
 	return m.GetAuthorFn(id)
 
 }
 
-func (m *AuthorService) GetAll() ([]*teal.Author, error) {
+func (m *AuthorStore) GetAll() ([]*teal.Author, error) {
 	return m.GetAllAuthorsFn()
 
 }
 
-func (m *AuthorService) Create(ctx context.Context, a *teal.Author) (*teal.Author, error) {
+func (m *AuthorStore) Create(ctx context.Context, a *teal.Author) (*teal.Author, error) {
 	return m.CreateAuthorFn(ctx, a)
 
 }
 
-func (m *AuthorService) Update(ctx context.Context, id int, a *teal.Author) (*teal.Author, error) {
+func (m *AuthorStore) Update(ctx context.Context, id int, a *teal.Author) (*teal.Author, error) {
 	return m.UpdateAuthorFn(ctx, id, a)
 
 }
 
-func (m *AuthorService) Delete(ctx context.Context, id int) error {
+func (m *AuthorStore) Delete(ctx context.Context, id int) error {
 	return m.DeleteAuthorFn(ctx, id)
 }

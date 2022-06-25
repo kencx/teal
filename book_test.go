@@ -1,15 +1,16 @@
 package teal
 
 import (
-	"strings"
 	"testing"
+
+	"github.com/kencx/teal/validator"
 )
 
 func TestValidateBook(t *testing.T) {
 	tests := []struct {
 		name string
 		book *Book
-		err  string
+		err  map[string]string
 	}{{
 		name: "success",
 		book: &Book{
@@ -17,14 +18,14 @@ func TestValidateBook(t *testing.T) {
 			ISBN:   "100",
 			Author: []string{"John Doe"},
 		},
-		err: "",
+		err: nil,
 	}, {
 		name: "no title",
 		book: &Book{
 			ISBN:   "100",
 			Author: []string{"John Doe"},
 		},
-		err: "title",
+		err: map[string]string{"title": "value is missing"},
 	}, {
 		name: "nil author",
 		book: &Book{
@@ -32,7 +33,7 @@ func TestValidateBook(t *testing.T) {
 			ISBN:   "100",
 			Author: nil,
 		},
-		err: "author",
+		err: map[string]string{"author": "value is missing"},
 	}, {
 		name: "zero length author",
 		book: &Book{
@@ -40,22 +41,14 @@ func TestValidateBook(t *testing.T) {
 			ISBN:   "100",
 			Author: []string{},
 		},
-		err: "author",
-	}, {
-		name: "empty string author",
-		book: &Book{
-			Title:  "Foo Bar",
-			ISBN:   "100",
-			Author: []string{""},
-		},
-		err: "author",
+		err: map[string]string{"author": "value is missing"},
 	}, {
 		name: "no isbn",
 		book: &Book{
 			Title:  "Foo Bar",
 			Author: []string{"John Doe"},
 		},
-		err: "isbn",
+		err: map[string]string{"isbn": "value is missing"},
 	}, {
 		name: "isbn regex fail",
 		book: &Book{
@@ -63,43 +56,43 @@ func TestValidateBook(t *testing.T) {
 			ISBN:   "abc",
 			Author: []string{"John Doe"},
 		},
-		err: "isbn",
+		err: map[string]string{"isbn": "incorrect format"},
 	}, {
 		name: "multiple errors",
 		book: &Book{
 			Title:  "Foo Bar",
 			ISBN:   "abc",
-			Author: []string{""},
+			Author: nil,
 		},
-		err: "author, isbn",
+		err: map[string]string{"author": "value is missing", "isbn": "incorrect format"},
 	}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			v := validator.New()
+			tt.book.Validate(v)
 
-			verrs := tt.book.Validate()
-
-			if len(verrs) != 0 && tt.err == "" {
-				t.Fatalf("expected no err, got %d errors", len(verrs))
+			if !v.Valid() && tt.err == nil {
+				t.Fatalf("expected no err, got %v", v.Errors)
 			}
 
-			if len(verrs) == 0 && tt.err != "" {
-				t.Fatalf("expected err with %q, got 0 errs", tt.err)
+			if v.Valid() && tt.err != nil {
+				t.Fatalf("expected err with %q, got nil", tt.err)
 			}
 
-			if len(verrs) != 0 && tt.err != "" {
-				strs := strings.Split(tt.err, ", ")
+			if !v.Valid() && tt.err != nil {
+				if len(v.Errors) != len(tt.err) {
+					t.Fatalf("got %d errs, want %d errs", len(v.Errors), len(tt.err))
+				}
 
-				// TODO probably a better way to do this
-				for _, v := range verrs {
-					ok := false
-					for _, s := range strs {
-						if strings.Contains(v.Message, s) {
-							ok = true
-						}
-					}
+				for k, v := range v.Errors {
+					s, ok := tt.err[k]
 					if !ok {
-						t.Fatalf("got %v, want %v err", v, tt.err)
+						t.Fatalf("err field missing %q", k)
+					}
+
+					if v != s {
+						t.Fatalf("got %v, want %v error", v, s)
 					}
 				}
 			}

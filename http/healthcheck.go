@@ -18,7 +18,7 @@ func NewHealth(version string) *health {
 func (s *Server) Healthcheck(rw http.ResponseWriter, r *http.Request) {
 	h := NewHealth("v1.0")
 
-	res, err := util.ToJSON(h)
+	res, err := util.ToJSON(response.Envelope{"health": h})
 	if err != nil {
 		response.InternalServerError(rw, r, err)
 	}

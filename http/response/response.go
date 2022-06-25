@@ -1,16 +1,16 @@
 package response
 
 import (
-	"fmt"
 	"net/http"
 
-	"github.com/kencx/teal"
 	"github.com/kencx/teal/util"
 )
 
 var contentType = "application/json"
 
-type Response struct {
+type Envelope map[string]interface{}
+
+type response struct {
 	rw         http.ResponseWriter
 	r          *http.Request
 	statusCode int
@@ -18,8 +18,8 @@ type Response struct {
 	body       []byte
 }
 
-func New(rw http.ResponseWriter, r *http.Request) *Response {
-	return &Response{
+func New(rw http.ResponseWriter, r *http.Request) *response {
+	return &response{
 		rw:         rw,
 		r:          r,
 		statusCode: http.StatusOK,
@@ -47,21 +47,23 @@ func Created(rw http.ResponseWriter, r *http.Request, body []byte) {
 	res.Write()
 }
 
-type ErrorResponse struct {
-	Err string `json:"error"`
-}
-
-func NewError(rw http.ResponseWriter, r *http.Request, err error) *Response {
+func NewError(rw http.ResponseWriter, r *http.Request, err interface{}) *response {
 	res := New(rw, r)
 	res.statusCode = http.StatusBadRequest
 
-	res.body, err = util.ToJSON(&ErrorResponse{
-		Err: err.Error(),
-	})
-	if err != nil {
-		// TODO log marshal error
-		res.body = []byte("")
-		res.statusCode = http.StatusInternalServerError
+	switch t := err.(type) {
+	case error:
+		res.body, err = util.ToJSON(Envelope{"error": t.Error()})
+		if err != nil {
+			res.body, err = util.ToJSON(Envelope{"error": "something went wrong"})
+			res.statusCode = http.StatusInternalServerError
+		}
+	default:
+		res.body, err = util.ToJSON(Envelope{"error": err})
+		if err != nil {
+			res.body, err = util.ToJSON(Envelope{"error": "something went wrong"})
+			res.statusCode = http.StatusInternalServerError
+		}
 	}
 	return res
 }
@@ -83,35 +85,22 @@ func NotFound(rw http.ResponseWriter, r *http.Request, err error) {
 	res.Write()
 }
 
-func Unauthorized(rw http.ResponseWriter, r *http.Request, body []byte) {
-	res := NewError(rw, r, fmt.Errorf(string(body)))
+func Unauthorized(rw http.ResponseWriter, r *http.Request, err error) {
+	res := NewError(rw, r, err)
 	res.statusCode = http.StatusUnauthorized
 	res.headers["WWW-Authenticate"] = `Basic realm="Restricted"`
 	res.Write()
 }
 
-// TODO handlePanic
-
-type ValidationErrResponse struct {
-	Err []*teal.ValidationError `json:"errors"`
-}
-
-func ValidationError(rw http.ResponseWriter, r *http.Request, verrs []*teal.ValidationError) {
-	res := New(rw, r)
-	res.statusCode = http.StatusBadRequest
-
-	var err error
-	res.body, err = util.ToJSON(&ValidationErrResponse{
-		Err: verrs,
-	})
-	if err != nil {
-		res.statusCode = http.StatusInternalServerError
-		res.body = []byte("")
-	}
+func ValidationError(rw http.ResponseWriter, r *http.Request, err map[string]string) {
+	res := NewError(rw, r, err)
+	res.statusCode = http.StatusUnprocessableEntity
 	res.Write()
 }
 
-func (r *Response) Write() {
+// TODO handlePanic
+
+func (r *response) Write() {
 	for k, v := range r.headers {
 		r.rw.Header().Set(k, v)
 	}
