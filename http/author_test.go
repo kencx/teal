@@ -2,7 +2,6 @@ package http
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -80,7 +79,7 @@ func TestAddAuthor(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Authors: &mock.AuthorStore{
-			CreateAuthorFn: func(ctx context.Context, a *teal.Author) (*teal.Author, error) {
+			CreateAuthorFn: func(a *teal.Author) (*teal.Author, error) {
 				return testAuthor1, nil
 			},
 		},
@@ -107,7 +106,7 @@ func TestUpdateAuthor(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Authors: &mock.AuthorStore{
-			UpdateAuthorFn: func(ctx context.Context, id int, a *teal.Author) (*teal.Author, error) {
+			UpdateAuthorFn: func(id int, a *teal.Author) (*teal.Author, error) {
 				return testAuthor2, nil
 			},
 		},
@@ -131,7 +130,7 @@ func TestDeleteAuthor(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Authors: &mock.AuthorStore{
-			DeleteAuthorFn: func(ctx context.Context, id int) error {
+			DeleteAuthorFn: func(id int) error {
 				return nil
 			},
 		},

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/kencx/teal"
@@ -23,7 +24,10 @@ type BookModel struct {
 }
 
 func (bs *BookStore) Get(id int) (*teal.Book, error) {
-	tx, err := bs.db.Beginx()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	tx, err := bs.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
 	}
@@ -37,7 +41,7 @@ func (bs *BookStore) Get(id int) (*teal.Book, error) {
 		WHERE b.id=$1
 		GROUP BY b.id;`
 
-	err = tx.QueryRowx(stmt, id).StructScan(&dest)
+	err = tx.QueryRowxContext(ctx, stmt, id).StructScan(&dest)
 	if err == sql.ErrNoRows {
 		return nil, teal.ErrDoesNotExist
 	}
@@ -50,7 +54,10 @@ func (bs *BookStore) Get(id int) (*teal.Book, error) {
 }
 
 func (bs *BookStore) GetByISBN(isbn string) (*teal.Book, error) {
-	tx, err := bs.db.Beginx()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	tx, err := bs.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
 	}
@@ -64,7 +71,7 @@ func (bs *BookStore) GetByISBN(isbn string) (*teal.Book, error) {
 		WHERE b.isbn=$1
 		GROUP BY b.isbn;`
 
-	err = tx.QueryRowx(stmt, isbn).StructScan(&dest)
+	err = tx.QueryRowxContext(ctx, stmt, isbn).StructScan(&dest)
 	if err == sql.ErrNoRows {
 		return nil, teal.ErrDoesNotExist
 	}
@@ -77,7 +84,10 @@ func (bs *BookStore) GetByISBN(isbn string) (*teal.Book, error) {
 }
 
 func (bs *BookStore) GetByTitle(title string) (*teal.Book, error) {
-	tx, err := bs.db.Beginx()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	tx, err := bs.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
 	}
@@ -91,7 +101,7 @@ func (bs *BookStore) GetByTitle(title string) (*teal.Book, error) {
 		WHERE b.title=$1
 		GROUP BY b.title;`
 
-	err = tx.QueryRowx(stmt, title).StructScan(&dest)
+	err = tx.QueryRowxContext(ctx, stmt, title).StructScan(&dest)
 	if err == sql.ErrNoRows {
 		return nil, teal.ErrDoesNotExist
 	}
@@ -104,7 +114,10 @@ func (bs *BookStore) GetByTitle(title string) (*teal.Book, error) {
 }
 
 func (bs *BookStore) GetAll() ([]*teal.Book, error) {
-	tx, err := bs.db.Beginx()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	tx, err := bs.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
 	}
@@ -118,7 +131,7 @@ func (bs *BookStore) GetAll() ([]*teal.Book, error) {
 		GROUP BY b.id
 		ORDER BY b.id;`
 
-	err = tx.Select(&dest, stmt)
+	err = tx.SelectContext(ctx, &dest, stmt)
 	// sqlx Select does not seem to return sql.ErrNoRows
 	// related issue: https://github.com/jmoiron/sqlx/issues/762#issuecomment-1062649063
 	// if err == sql.ErrNoRows {
@@ -141,10 +154,13 @@ func (bs *BookStore) GetAll() ([]*teal.Book, error) {
 
 // Create a book entry in books, author entries in authors and establishes the necessary
 // book author relationships
-func (bs *BookStore) Create(ctx context.Context, b *teal.Book) (*teal.Book, error) {
+func (bs *BookStore) Create(b *teal.Book) (*teal.Book, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
 	if err := Tx(bs.db, ctx, func(tx *sqlx.Tx) error {
 
-		book, err := insertBook(ctx, tx, b)
+		book, err := insertBook(tx, b)
 		if err != nil {
 			return err
 		}
@@ -165,7 +181,7 @@ func (bs *BookStore) Create(ctx context.Context, b *teal.Book) (*teal.Book, erro
 		}
 		return nil
 
-	}, &sql.TxOptions{}); err != nil {
+	}); err != nil {
 		return nil, err
 	}
 
@@ -179,16 +195,24 @@ func (bs *BookStore) Create(ctx context.Context, b *teal.Book) (*teal.Book, erro
 // Update book details.
 // For authors, a new author row is created for each new author
 // No authors are deleted, unless it has no relationship with any books
-func (bs *BookStore) Update(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
+func (bs *BookStore) Update(id int, b *teal.Book) (*teal.Book, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
 	if err := Tx(bs.db, ctx, func(tx *sqlx.Tx) error {
 
-		book, err := updateBook(ctx, tx, id, b)
+		err := updateBook(tx, id, b)
 		if err != nil {
 			return err
 		}
 
-		// if author is changed
-		if !reflect.DeepEqual(book.Author, b.Author) {
+		current_authors, err := bs.GetAuthorsFromBook(id)
+		if err != nil {
+			return err
+		}
+
+		// TODO check if order matters
+		if !reflect.DeepEqual(current_authors, b.Author) {
 
 			// Add new or get existing authors
 			// Renaming an author should not update the same author row for other books
@@ -211,24 +235,18 @@ func (bs *BookStore) Update(ctx context.Context, id int, b *teal.Book) (*teal.Bo
 				return err
 			}
 		}
-
-		// updated authors needs to be passed to the returned book
-		book.Author = b.Author
-		ctx = tcontext.WithBook(ctx, book)
 		return nil
 
-	}, &sql.TxOptions{}); err != nil {
+	}); err != nil {
 		return nil, err
 	}
-
-	book, err := tcontext.GetBook(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return book, nil
+	return b, nil
 }
 
-func (bs *BookStore) Delete(ctx context.Context, id int) error {
+func (bs *BookStore) Delete(id int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
 	if err := Tx(bs.db, ctx, func(tx *sqlx.Tx) error {
 
 		err := deleteBook(tx, id)
@@ -255,20 +273,19 @@ func (bs *BookStore) Delete(ctx context.Context, id int) error {
 		deleteAuthorsWithNoBooks(tx)
 		return nil
 
-	}, &sql.TxOptions{}); err != nil {
+	}); err != nil {
 		return err
 	}
 	return nil
 }
 
 // insert book entry to books table
-func insertBook(ctx context.Context, tx *sqlx.Tx, b *teal.Book) (*teal.Book, error) {
-	var book teal.Book
+func insertBook(tx *sqlx.Tx, b *teal.Book) (*teal.Book, error) {
 
 	stmt := `INSERT INTO books
 		(title, description, isbn, numOfPages, rating, state, dateAdded, dateUpdated, dateCompleted)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *;`
-	err := tx.QueryRowxContext(ctx, stmt,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id;`
+	err := tx.QueryRowx(stmt,
 		b.Title,
 		b.Description,
 		b.ISBN,
@@ -277,17 +294,15 @@ func insertBook(ctx context.Context, tx *sqlx.Tx, b *teal.Book) (*teal.Book, err
 		b.State,
 		b.DateAdded,
 		b.DateUpdated,
-		b.DateCompleted).StructScan(&book)
+		b.DateCompleted).StructScan(b)
 
 	if err != nil {
 		return nil, fmt.Errorf("db: insert to books table failed: %v", err)
 	}
-	book.Author = b.Author
-	return &book, nil
+	return b, nil
 }
 
-func updateBook(ctx context.Context, tx *sqlx.Tx, id int, b *teal.Book) (*teal.Book, error) {
-	var book teal.Book
+func updateBook(tx *sqlx.Tx, id int, b *teal.Book) error {
 
 	stmt := `UPDATE books
 			SET title=$1,
@@ -299,8 +314,8 @@ func updateBook(ctx context.Context, tx *sqlx.Tx, id int, b *teal.Book) (*teal.B
 			dateAdded=$7,
 			dateUpdated=$8,
 			dateCompleted=$9
-			WHERE id=$10 RETURNING *;`
-	err := tx.QueryRowxContext(ctx, stmt,
+			WHERE id=$10;`
+	res, err := tx.Exec(stmt,
 		b.Title,
 		b.Description,
 		b.ISBN,
@@ -310,19 +325,25 @@ func updateBook(ctx context.Context, tx *sqlx.Tx, id int, b *teal.Book) (*teal.B
 		b.DateAdded,
 		b.DateUpdated,
 		b.DateCompleted,
-		id).StructScan(&book)
+		id)
 
 	if err != nil {
-		return nil, fmt.Errorf("db: update book %d failed: %v", id, err)
+		return fmt.Errorf("db: update book %d failed: %v", id, err)
 	}
-
-	return &book, nil
+	count, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("db: delete book %d failed: %v", id, err)
+	}
+	if count == 0 {
+		return errors.New("db: no books removed")
+	}
+	return nil
 }
 
 // delete book entry from books table
 func deleteBook(tx *sqlx.Tx, id int) error {
 
-	stmt := `DELETE from books WHERE books.id=$1;`
+	stmt := `DELETE from books WHERE id=$1;`
 	res, err := tx.Exec(stmt, id)
 	if err != nil {
 		return fmt.Errorf("db: delete book %d failed: %v", id, err)

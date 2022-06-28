@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/kencx/teal"
@@ -101,7 +102,10 @@ func (s *AuthorStore) GetAllNames() ([]string, error) {
 	return dest, nil
 }
 
-func (s *AuthorStore) Create(ctx context.Context, a *teal.Author) (*teal.Author, error) {
+func (s *AuthorStore) Create(a *teal.Author) (*teal.Author, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
 	if err := Tx(s.db, ctx, func(tx *sqlx.Tx) error {
 
 		id, err := insertOrGetAuthor(tx, a)
@@ -112,11 +116,14 @@ func (s *AuthorStore) Create(ctx context.Context, a *teal.Author) (*teal.Author,
 		ctx = tcontext.WithAuthorID(ctx, id)
 		return nil
 
-	}, &sql.TxOptions{}); err != nil {
+	}); err != nil {
 		return nil, err
 	}
 
 	id, err := tcontext.GetAuthorID(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	// query author after transaction committed
 	author, err := s.Get(int(id))
@@ -126,7 +133,10 @@ func (s *AuthorStore) Create(ctx context.Context, a *teal.Author) (*teal.Author,
 	return author, nil
 }
 
-func (s *AuthorStore) Update(ctx context.Context, id int, a *teal.Author) (*teal.Author, error) {
+func (s *AuthorStore) Update(id int, a *teal.Author) (*teal.Author, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
 	if err := Tx(s.db, ctx, func(tx *sqlx.Tx) error {
 
 		err := updateAuthor(tx, id, a)
@@ -135,18 +145,16 @@ func (s *AuthorStore) Update(ctx context.Context, id int, a *teal.Author) (*teal
 		}
 		return nil
 
-	}, &sql.TxOptions{}); err != nil {
+	}); err != nil {
 		return nil, err
 	}
-
-	author, err := s.Get(int(id))
-	if err != nil {
-		return nil, err
-	}
-	return author, nil
+	return a, nil
 }
 
-func (s *AuthorStore) Delete(ctx context.Context, id int) error {
+func (s *AuthorStore) Delete(id int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
 	if err := Tx(s.db, ctx, func(tx *sqlx.Tx) error {
 
 		err := deleteAuthor(tx, id)
@@ -171,7 +179,7 @@ func (s *AuthorStore) Delete(ctx context.Context, id int) error {
 		}
 		return nil
 
-	}, &sql.TxOptions{}); err != nil {
+	}); err != nil {
 		return err
 	}
 	return nil

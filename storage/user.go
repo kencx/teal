@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/kencx/teal"
@@ -71,8 +72,8 @@ func (s *UserStore) GetAll() ([]*teal.User, error) {
 	return dest, nil
 }
 
-// func (s *UserStore) Create(ctx context.Context, a *teal.User) (*teal.User, error) {
-// 	if err := Tx(s.db, ctx, func(tx *sqlx.Tx) error {
+// func (s *UserStore) Create(u *teal.User) (*teal.User, error) {
+// 	if err := Tx(s.db, func(tx *sqlx.Tx) error {
 //
 // 		id, err := insertOrGetUser(tx, a)
 // 		if err != nil {
@@ -86,7 +87,6 @@ func (s *UserStore) GetAll() ([]*teal.User, error) {
 // 		return nil, err
 // 	}
 //
-// 	// TODO implement separate context package with type safe getters and setters
 // 	id, err := tcontext.GetUser(ctx)
 //
 // 	// query user after transaction committed
@@ -97,7 +97,10 @@ func (s *UserStore) GetAll() ([]*teal.User, error) {
 // 	return user, nil
 // }
 
-func (s *UserStore) Update(ctx context.Context, id int, a *teal.User) (*teal.User, error) {
+func (s *UserStore) Update(id int, a *teal.User) (*teal.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
 	if err := Tx(s.db, ctx, func(tx *sqlx.Tx) error {
 
 		err := updateUser(tx, id, a)
@@ -106,7 +109,7 @@ func (s *UserStore) Update(ctx context.Context, id int, a *teal.User) (*teal.Use
 		}
 		return nil
 
-	}, &sql.TxOptions{}); err != nil {
+	}); err != nil {
 		return nil, err
 	}
 
@@ -117,7 +120,10 @@ func (s *UserStore) Update(ctx context.Context, id int, a *teal.User) (*teal.Use
 	return user, nil
 }
 
-func (s *UserStore) Delete(ctx context.Context, id int) error {
+func (s *UserStore) Delete(id int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
 	if err := Tx(s.db, ctx, func(tx *sqlx.Tx) error {
 
 		err := deleteUser(tx, id)
@@ -126,7 +132,7 @@ func (s *UserStore) Delete(ctx context.Context, id int) error {
 		}
 		return nil
 
-	}, &sql.TxOptions{}); err != nil {
+	}); err != nil {
 		return err
 	}
 	return nil

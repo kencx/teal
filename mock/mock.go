@@ -1,8 +1,6 @@
 package mock
 
 import (
-	"context"
-
 	"github.com/kencx/teal"
 )
 
@@ -10,18 +8,18 @@ type BookStore struct {
 	GetAllBooksFn    func() ([]*teal.Book, error)
 	GetBookFn        func(id int) (*teal.Book, error)
 	GetBookByTitleFn func(title string) (*teal.Book, error)
-	CreateBookFn     func(ctx context.Context, b *teal.Book) (*teal.Book, error)
-	UpdateBookFn     func(ctx context.Context, id int, b *teal.Book) (*teal.Book, error)
-	DeleteBookFn     func(ctx context.Context, id int) error
+	CreateBookFn     func(b *teal.Book) (*teal.Book, error)
+	UpdateBookFn     func(id int, b *teal.Book) (*teal.Book, error)
+	DeleteBookFn     func(id int) error
 	GetByAuthorFn    func(name string) ([]*teal.Book, error)
 }
 
 type AuthorStore struct {
 	GetAuthorFn     func(id int) (*teal.Author, error)
 	GetAllAuthorsFn func() ([]*teal.Author, error)
-	CreateAuthorFn  func(ctx context.Context, a *teal.Author) (*teal.Author, error)
-	UpdateAuthorFn  func(ctx context.Context, id int, a *teal.Author) (*teal.Author, error)
-	DeleteAuthorFn  func(ctx context.Context, id int) error
+	CreateAuthorFn  func(a *teal.Author) (*teal.Author, error)
+	UpdateAuthorFn  func(id int, a *teal.Author) (*teal.Author, error)
+	DeleteAuthorFn  func(id int) error
 }
 
 func (m *BookStore) Get(id int) (*teal.Book, error) {
@@ -36,16 +34,16 @@ func (m *BookStore) GetAll() ([]*teal.Book, error) {
 	return m.GetAllBooksFn()
 }
 
-func (m *BookStore) Create(ctx context.Context, b *teal.Book) (*teal.Book, error) {
-	return m.CreateBookFn(ctx, b)
+func (m *BookStore) Create(b *teal.Book) (*teal.Book, error) {
+	return m.CreateBookFn(b)
 }
 
-func (m *BookStore) Update(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
-	return m.UpdateBookFn(ctx, id, b)
+func (m *BookStore) Update(id int, b *teal.Book) (*teal.Book, error) {
+	return m.UpdateBookFn(id, b)
 }
 
-func (m *BookStore) Delete(ctx context.Context, id int) error {
-	return m.DeleteBookFn(ctx, id)
+func (m *BookStore) Delete(id int) error {
+	return m.DeleteBookFn(id)
 }
 
 func (m *BookStore) GetByAuthor(name string) ([]*teal.Book, error) {
@@ -62,16 +60,16 @@ func (m *AuthorStore) GetAll() ([]*teal.Author, error) {
 
 }
 
-func (m *AuthorStore) Create(ctx context.Context, a *teal.Author) (*teal.Author, error) {
-	return m.CreateAuthorFn(ctx, a)
+func (m *AuthorStore) Create(a *teal.Author) (*teal.Author, error) {
+	return m.CreateAuthorFn(a)
 
 }
 
-func (m *AuthorStore) Update(ctx context.Context, id int, a *teal.Author) (*teal.Author, error) {
-	return m.UpdateAuthorFn(ctx, id, a)
+func (m *AuthorStore) Update(id int, a *teal.Author) (*teal.Author, error) {
+	return m.UpdateAuthorFn(id, a)
 
 }
 
-func (m *AuthorStore) Delete(ctx context.Context, id int) error {
-	return m.DeleteAuthorFn(ctx, id)
+func (m *AuthorStore) Delete(id int) error {
+	return m.DeleteAuthorFn(id)
 }

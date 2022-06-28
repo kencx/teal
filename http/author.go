@@ -1,9 +1,7 @@
 package http
 
 import (
-	"context"
 	"net/http"
-	"time"
 
 	"github.com/kencx/teal"
 	"github.com/kencx/teal/http/request"
@@ -15,9 +13,9 @@ import (
 type AuthorStore interface {
 	Get(id int) (*teal.Author, error)
 	GetAll() ([]*teal.Author, error)
-	Create(ctx context.Context, b *teal.Author) (*teal.Author, error)
-	Update(ctx context.Context, id int, b *teal.Author) (*teal.Author, error)
-	Delete(ctx context.Context, id int) error
+	Create(b *teal.Author) (*teal.Author, error)
+	Update(id int, b *teal.Author) (*teal.Author, error)
+	Delete(id int) error
 }
 
 func (s *Server) GetAuthor(rw http.ResponseWriter, r *http.Request) {
@@ -88,10 +86,7 @@ func (s *Server) AddAuthor(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-	defer cancel()
-
-	result, err := s.Authors.Create(ctx, &author)
+	result, err := s.Authors.Create(&author)
 	if err != nil {
 		s.ErrLog.Print(err)
 		response.InternalServerError(rw, r, err)
@@ -131,10 +126,7 @@ func (s *Server) UpdateAuthor(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-	defer cancel()
-
-	result, err := s.Authors.Update(ctx, id, &author)
+	result, err := s.Authors.Update(id, &author)
 	if err == teal.ErrDoesNotExist {
 		response.InternalServerError(rw, r, err)
 		return
@@ -161,7 +153,7 @@ func (s *Server) DeleteAuthor(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.Authors.Delete(r.Context(), id)
+	err := s.Authors.Delete(id)
 	if err == teal.ErrDoesNotExist {
 		response.NotFound(rw, r, err)
 		return

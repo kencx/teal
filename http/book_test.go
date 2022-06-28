@@ -2,7 +2,6 @@ package http
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"log"
@@ -179,7 +178,7 @@ func TestAddBook(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Books: &mock.BookStore{
-			CreateBookFn: func(ctx context.Context, b *teal.Book) (*teal.Book, error) {
+			CreateBookFn: func(b *teal.Book) (*teal.Book, error) {
 				return testBook1, nil
 			},
 		}}
@@ -212,7 +211,7 @@ func TestAddBookFailValidation(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Books: &mock.BookStore{
-			CreateBookFn: func(ctx context.Context, b *teal.Book) (*teal.Book, error) {
+			CreateBookFn: func(b *teal.Book) (*teal.Book, error) {
 				return failBook, nil
 			},
 		}}
@@ -243,7 +242,7 @@ func TestUpdateBook(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Books: &mock.BookStore{
-			UpdateBookFn: func(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
+			UpdateBookFn: func(id int, b *teal.Book) (*teal.Book, error) {
 				return testBook2, nil
 			},
 		}}
@@ -270,7 +269,7 @@ func TestUpdateBookNil(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Books: &mock.BookStore{
-			UpdateBookFn: func(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
+			UpdateBookFn: func(id int, b *teal.Book) (*teal.Book, error) {
 				return nil, teal.ErrDoesNotExist
 			},
 		},
@@ -301,7 +300,7 @@ func TestUpdateBookFailValidation(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Books: &mock.BookStore{
-			UpdateBookFn: func(ctx context.Context, id int, b *teal.Book) (*teal.Book, error) {
+			UpdateBookFn: func(id int, b *teal.Book) (*teal.Book, error) {
 				return failBook, nil
 			},
 		}}
@@ -330,7 +329,7 @@ func TestDeleteBook(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Books: &mock.BookStore{
-			DeleteBookFn: func(ctx context.Context, id int) error {
+			DeleteBookFn: func(id int) error {
 				return nil
 			},
 		}}
@@ -347,7 +346,7 @@ func TestDeleteBookNil(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Books: &mock.BookStore{
-			DeleteBookFn: func(ctx context.Context, id int) error {
+			DeleteBookFn: func(id int) error {
 				return teal.ErrDoesNotExist
 			},
 		},

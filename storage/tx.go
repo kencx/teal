@@ -2,15 +2,17 @@ package storage
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
 )
 
-// functional Tx helper for Exec statements
-func Tx(db *sqlx.DB, ctx context.Context, fn func(tx *sqlx.Tx) error, opts *sql.TxOptions) error {
-	tx, err := db.BeginTxx(ctx, opts)
+type txFn func(tx *sqlx.Tx) error
+
+// Functional Tx helper for multiple statements
+// Does not allow return of objects
+func Tx(db *sqlx.DB, ctx context.Context, fn txFn) error {
+	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("db: failed to start transaction: %v", err)
 	}

@@ -1,11 +1,9 @@
 package http
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/kencx/teal"
@@ -19,9 +17,9 @@ type BookStore interface {
 	Get(id int) (*teal.Book, error)
 	GetByTitle(title string) (*teal.Book, error)
 	GetAll() ([]*teal.Book, error)
-	Create(ctx context.Context, b *teal.Book) (*teal.Book, error)
-	Update(ctx context.Context, id int, b *teal.Book) (*teal.Book, error)
-	Delete(ctx context.Context, id int) error
+	Create(b *teal.Book) (*teal.Book, error)
+	Update(id int, b *teal.Book) (*teal.Book, error)
+	Delete(id int) error
 
 	GetByAuthor(name string) ([]*teal.Book, error)
 }
@@ -106,10 +104,7 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-	defer cancel()
-
-	result, err := s.Books.Create(ctx, &book)
+	result, err := s.Books.Create(&book)
 	if err != nil {
 		s.ErrLog.Print(err)
 		response.BadRequest(rw, r, err)
@@ -149,10 +144,7 @@ func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-	defer cancel()
-
-	result, err := s.Books.Update(ctx, id, &book)
+	result, err := s.Books.Update(id, &book)
 	if err == teal.ErrDoesNotExist {
 		response.NotFound(rw, r, err)
 		return
@@ -179,7 +171,7 @@ func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.Books.Delete(r.Context(), id)
+	err := s.Books.Delete(id)
 	if err == teal.ErrDoesNotExist {
 		response.NotFound(rw, r, err)
 		return

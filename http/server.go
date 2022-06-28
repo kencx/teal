@@ -49,7 +49,6 @@ func NewServer() *Server {
 func (s *Server) Run(port string) error {
 	s.Server.Addr = port
 
-	s.InfoLog.Println("Server listening on", port)
 	err := s.Server.ListenAndServe()
 	if err != nil {
 		return err

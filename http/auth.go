@@ -1,9 +1,7 @@
 package http
 
 import (
-	"context"
 	"net/http"
-	"time"
 
 	"github.com/kencx/teal"
 	"github.com/kencx/teal/http/request"
@@ -35,10 +33,7 @@ func (s *Server) Register(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-	defer cancel()
-
-	result, err := s.Users.Create(ctx, user)
+	result, err := s.Users.Create(user)
 	if err != nil {
 		response.InternalServerError(rw, r, err)
 		return

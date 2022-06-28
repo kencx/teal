@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -11,24 +13,32 @@ import (
 	"github.com/kencx/teal/storage"
 )
 
+type config struct {
+	port int
+	env  string
+	dsn  string
+}
+
 type App struct {
+	config config
 	db     *storage.Store
 	server *http.Server
 }
 
-func NewApp(db *sqlx.DB) *App {
+func NewApp(config config, db *sqlx.DB) *App {
 	return &App{
+		config: config,
 		db:     storage.NewStore(db),
 		server: http.NewServer(),
 	}
 }
 
-func (a *App) Run(port string) error {
-
+func (a *App) Run() error {
 	a.server.Books = a.db.Books
 	a.server.Authors = a.db.Authors
 
-	if err := a.server.Run(port); err != nil {
+	a.server.InfoLog.Printf("Starting %s server on :%d", a.config.env, a.config.port)
+	if err := a.server.Run(fmt.Sprintf(":%d", a.config.port)); err != nil {
 		return err
 	}
 	return nil
@@ -53,7 +63,18 @@ func (a *App) Close() error {
 
 func main() {
 
+	var config config
+
+	flag.IntVar(&config.port, "port", 9090, "API Server Port")
+	flag.StringVar(&config.env, "env", "dev", "Environment (dev|staging|prod)")
+
+	// flag.StringVar(&config.dsn, "dsn", "postgres://teal:password1@localhost/teal", "PostgreSQL DSN")
+	// flag.StringVar(&config.dsn, "dsn", os.Getenv("TEAL_POSTGRES_DSN"), "PostgreSQL DSN")
+
+	flag.Parse()
+
 	db, err := storage.Open("./test.db")
+	// db, err := storage.Open(config.dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -67,10 +88,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	app := NewApp(db)
+	app := NewApp(config, db)
 	app.server.InfoLog.Println("Database connection successfully established!")
 
-	go app.Run(":9090")
+	go app.Run()
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt)

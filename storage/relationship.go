@@ -9,7 +9,7 @@ import (
 )
 
 // get list of author names from given isbn
-func (bs *BookStore) GetAuthorsFromBook(book_isbn string) ([]string, error) {
+func (bs *BookStore) GetAuthorsFromBook(id int) ([]string, error) {
 	tx, err := bs.db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
@@ -17,16 +17,14 @@ func (bs *BookStore) GetAuthorsFromBook(book_isbn string) ([]string, error) {
 	defer endTx(tx, err)
 
 	var dest []struct {
-		Title string
-		Name  string
+		Name string
 	}
-	stmt := `SELECT b.title, a.name
+	stmt := `SELECT a.name
 		FROM books_authors ba
-		JOIN books b ON b.id=ba.book_id
 		JOIN authors a ON a.id=ba.author_id
-		WHERE b.isbn=$1`
+		WHERE ba.book_id=$1`
 
-	if err := tx.Select(&dest, stmt, book_isbn); err != nil {
+	if err := tx.Select(&dest, stmt, id); err != nil {
 		return nil, err
 	}
 
