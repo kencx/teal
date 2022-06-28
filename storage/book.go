@@ -23,7 +23,7 @@ type BookModel struct {
 	AuthorString string `db:"author_string"`
 }
 
-func (bs *BookStore) Get(id int) (*teal.Book, error) {
+func (bs *BookStore) Get(id int64) (*teal.Book, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -175,7 +175,7 @@ func (bs *BookStore) Create(b *teal.Book) (*teal.Book, error) {
 		}
 
 		// establish new book author relationship
-		err = linkBookToAuthors(tx, int64(book.ID), a_ids)
+		err = linkBookToAuthors(tx, book.ID, a_ids)
 		if err != nil {
 			return err
 		}
@@ -195,7 +195,7 @@ func (bs *BookStore) Create(b *teal.Book) (*teal.Book, error) {
 // Update book details.
 // For authors, a new author row is created for each new author
 // No authors are deleted, unless it has no relationship with any books
-func (bs *BookStore) Update(id int, b *teal.Book) (*teal.Book, error) {
+func (bs *BookStore) Update(id int64, b *teal.Book) (*teal.Book, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -224,10 +224,10 @@ func (bs *BookStore) Update(id int, b *teal.Book) (*teal.Book, error) {
 			}
 
 			// establish book author relationships with NEW or EXISTING authors
-			linkBookToAuthors(tx, int64(id), a_ids)
+			linkBookToAuthors(tx, id, a_ids)
 
 			// remove broken book author relationships
-			unlinkBookFromAuthors(tx, int64(id), a_ids)
+			unlinkBookFromAuthors(tx, id, a_ids)
 
 			// delete authors with no books
 			err = deleteAuthorsWithNoBooks(tx)
@@ -243,7 +243,7 @@ func (bs *BookStore) Update(id int, b *teal.Book) (*teal.Book, error) {
 	return b, nil
 }
 
-func (bs *BookStore) Delete(id int) error {
+func (bs *BookStore) Delete(id int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -302,7 +302,7 @@ func insertBook(tx *sqlx.Tx, b *teal.Book) (*teal.Book, error) {
 	return b, nil
 }
 
-func updateBook(tx *sqlx.Tx, id int, b *teal.Book) error {
+func updateBook(tx *sqlx.Tx, id int64, b *teal.Book) error {
 
 	stmt := `UPDATE books
 			SET title=$1,
@@ -341,7 +341,7 @@ func updateBook(tx *sqlx.Tx, id int, b *teal.Book) error {
 }
 
 // delete book entry from books table
-func deleteBook(tx *sqlx.Tx, id int) error {
+func deleteBook(tx *sqlx.Tx, id int64) error {
 
 	stmt := `DELETE from books WHERE id=$1;`
 	res, err := tx.Exec(stmt, id)

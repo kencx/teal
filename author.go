@@ -3,7 +3,7 @@ package teal
 import "github.com/kencx/teal/validator"
 
 type Author struct {
-	ID   int    `json:"id"`
+	ID   int64  `json:"id"`
 	Name string `json:"name"`
 }
 

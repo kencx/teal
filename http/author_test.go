@@ -26,7 +26,7 @@ func TestGetAuthor(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Authors: &mock.AuthorStore{
-			GetAuthorFn: func(id int) (*teal.Author, error) {
+			GetAuthorFn: func(id int64) (*teal.Author, error) {
 				return testAuthor1, nil
 			},
 		},
@@ -106,7 +106,7 @@ func TestUpdateAuthor(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Authors: &mock.AuthorStore{
-			UpdateAuthorFn: func(id int, a *teal.Author) (*teal.Author, error) {
+			UpdateAuthorFn: func(id int64, a *teal.Author) (*teal.Author, error) {
 				return testAuthor2, nil
 			},
 		},
@@ -130,7 +130,7 @@ func TestDeleteAuthor(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Authors: &mock.AuthorStore{
-			DeleteAuthorFn: func(id int) error {
+			DeleteAuthorFn: func(id int64) error {
 				return nil
 			},
 		},

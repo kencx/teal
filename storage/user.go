@@ -15,7 +15,7 @@ type UserStore struct {
 	db *sqlx.DB
 }
 
-func (s *UserStore) Get(id int) (*teal.User, error) {
+func (s *UserStore) Get(id int64) (*teal.User, error) {
 	tx, err := s.db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
@@ -90,14 +90,14 @@ func (s *UserStore) GetAll() ([]*teal.User, error) {
 // 	id, err := tcontext.GetUser(ctx)
 //
 // 	// query user after transaction committed
-// 	user, err := s.Get(int(id))
+// 	user, err := s.Get(id)
 // 	if err != nil {
 // 		return nil, err
 // 	}
 // 	return user, nil
 // }
 
-func (s *UserStore) Update(id int, a *teal.User) (*teal.User, error) {
+func (s *UserStore) Update(id int64, a *teal.User) (*teal.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -113,14 +113,14 @@ func (s *UserStore) Update(id int, a *teal.User) (*teal.User, error) {
 		return nil, err
 	}
 
-	user, err := s.Get(int(id))
+	user, err := s.Get(id)
 	if err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
-func (s *UserStore) Delete(id int) error {
+func (s *UserStore) Delete(id int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -185,7 +185,7 @@ func insertOrGetUsers(tx *sqlx.Tx, a []*teal.User) ([]int64, error) {
 	return ids, nil
 }
 
-func updateUser(tx *sqlx.Tx, id int, a *teal.User) error {
+func updateUser(tx *sqlx.Tx, id int64, a *teal.User) error {
 
 	stmt := `UPDATE users SET name=$1 WHERE id=$2`
 
@@ -205,7 +205,7 @@ func updateUser(tx *sqlx.Tx, id int, a *teal.User) error {
 	return nil
 }
 
-func deleteUser(tx *sqlx.Tx, id int) error {
+func deleteUser(tx *sqlx.Tx, id int64) error {
 
 	stmt := `DELETE FROM users WHERE id=$1;`
 	res, err := tx.Exec(stmt, id)

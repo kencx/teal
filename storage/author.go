@@ -26,7 +26,7 @@ func parseAuthors(authors []string) []*teal.Author {
 	return result
 }
 
-func (s *AuthorStore) Get(id int) (*teal.Author, error) {
+func (s *AuthorStore) Get(id int64) (*teal.Author, error) {
 	tx, err := s.db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
@@ -126,14 +126,14 @@ func (s *AuthorStore) Create(a *teal.Author) (*teal.Author, error) {
 	}
 
 	// query author after transaction committed
-	author, err := s.Get(int(id))
+	author, err := s.Get(id)
 	if err != nil {
 		return nil, err
 	}
 	return author, nil
 }
 
-func (s *AuthorStore) Update(id int, a *teal.Author) (*teal.Author, error) {
+func (s *AuthorStore) Update(id int64, a *teal.Author) (*teal.Author, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -151,7 +151,7 @@ func (s *AuthorStore) Update(id int, a *teal.Author) (*teal.Author, error) {
 	return a, nil
 }
 
-func (s *AuthorStore) Delete(id int) error {
+func (s *AuthorStore) Delete(id int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -232,7 +232,7 @@ func insertOrGetAuthors(tx *sqlx.Tx, a []*teal.Author) ([]int64, error) {
 	return ids, nil
 }
 
-func updateAuthor(tx *sqlx.Tx, id int, a *teal.Author) error {
+func updateAuthor(tx *sqlx.Tx, id int64, a *teal.Author) error {
 
 	stmt := `UPDATE authors SET name=$1 WHERE id=$2`
 
@@ -252,7 +252,7 @@ func updateAuthor(tx *sqlx.Tx, id int, a *teal.Author) error {
 	return nil
 }
 
-func deleteAuthor(tx *sqlx.Tx, id int) error {
+func deleteAuthor(tx *sqlx.Tx, id int64) error {
 
 	stmt := `DELETE FROM authors WHERE id=$1;`
 	res, err := tx.Exec(stmt, id)

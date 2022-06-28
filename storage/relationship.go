@@ -9,7 +9,7 @@ import (
 )
 
 // get list of author names from given isbn
-func (bs *BookStore) GetAuthorsFromBook(id int) ([]string, error) {
+func (bs *BookStore) GetAuthorsFromBook(id int64) ([]string, error) {
 	tx, err := bs.db.Beginx()
 	if err != nil {
 		return nil, fmt.Errorf("db: failed to start transaction: %v", err)

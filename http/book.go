@@ -14,12 +14,12 @@ import (
 )
 
 type BookStore interface {
-	Get(id int) (*teal.Book, error)
+	Get(id int64) (*teal.Book, error)
 	GetByTitle(title string) (*teal.Book, error)
 	GetAll() ([]*teal.Book, error)
 	Create(b *teal.Book) (*teal.Book, error)
-	Update(id int, b *teal.Book) (*teal.Book, error)
-	Delete(id int) error
+	Update(id int64, b *teal.Book) (*teal.Book, error)
+	Delete(id int64) error
 
 	GetByAuthor(name string) ([]*teal.Book, error)
 }
@@ -187,7 +187,7 @@ func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
 	response.OK(rw, r, nil)
 }
 
-func HandleId(rw http.ResponseWriter, r *http.Request) int {
+func HandleId(rw http.ResponseWriter, r *http.Request) int64 {
 	vars := mux.Vars(r)
 
 	id, err := strconv.Atoi(vars["id"])
@@ -196,5 +196,5 @@ func HandleId(rw http.ResponseWriter, r *http.Request) int {
 		return -1
 	}
 
-	return id
+	return int64(id)
 }

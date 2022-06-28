@@ -11,11 +11,11 @@ import (
 )
 
 type AuthorStore interface {
-	Get(id int) (*teal.Author, error)
+	Get(id int64) (*teal.Author, error)
 	GetAll() ([]*teal.Author, error)
 	Create(b *teal.Author) (*teal.Author, error)
-	Update(id int, b *teal.Author) (*teal.Author, error)
-	Delete(id int) error
+	Update(id int64, b *teal.Author) (*teal.Author, error)
+	Delete(id int64) error
 }
 
 func (s *Server) GetAuthor(rw http.ResponseWriter, r *http.Request) {

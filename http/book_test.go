@@ -43,7 +43,7 @@ func TestGetBook(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Books: &mock.BookStore{
-			GetBookFn: func(id int) (*teal.Book, error) {
+			GetBookFn: func(id int64) (*teal.Book, error) {
 				return testBook1, nil
 			},
 		},
@@ -69,7 +69,7 @@ func TestGetBookNil(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Books: &mock.BookStore{
-			GetBookFn: func(id int) (*teal.Book, error) {
+			GetBookFn: func(id int64) (*teal.Book, error) {
 				return nil, teal.ErrDoesNotExist
 			},
 		},
@@ -242,7 +242,7 @@ func TestUpdateBook(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Books: &mock.BookStore{
-			UpdateBookFn: func(id int, b *teal.Book) (*teal.Book, error) {
+			UpdateBookFn: func(id int64, b *teal.Book) (*teal.Book, error) {
 				return testBook2, nil
 			},
 		}}
@@ -269,7 +269,7 @@ func TestUpdateBookNil(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Books: &mock.BookStore{
-			UpdateBookFn: func(id int, b *teal.Book) (*teal.Book, error) {
+			UpdateBookFn: func(id int64, b *teal.Book) (*teal.Book, error) {
 				return nil, teal.ErrDoesNotExist
 			},
 		},
@@ -300,7 +300,7 @@ func TestUpdateBookFailValidation(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Books: &mock.BookStore{
-			UpdateBookFn: func(id int, b *teal.Book) (*teal.Book, error) {
+			UpdateBookFn: func(id int64, b *teal.Book) (*teal.Book, error) {
 				return failBook, nil
 			},
 		}}
@@ -329,7 +329,7 @@ func TestDeleteBook(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Books: &mock.BookStore{
-			DeleteBookFn: func(id int) error {
+			DeleteBookFn: func(id int64) error {
 				return nil
 			},
 		}}
@@ -346,7 +346,7 @@ func TestDeleteBookNil(t *testing.T) {
 		InfoLog: testInfoLog,
 		ErrLog:  testErrLog,
 		Books: &mock.BookStore{
-			DeleteBookFn: func(id int) error {
+			DeleteBookFn: func(id int64) error {
 				return teal.ErrDoesNotExist
 			},
 		},
