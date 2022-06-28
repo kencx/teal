@@ -93,11 +93,10 @@ func main() {
 
 	go app.Run()
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt)
-	signal.Notify(sigChan, syscall.SIGTERM)
-	<-sigChan
-	app.server.InfoLog.Println("Received terminate, shutting down...")
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	s := <-sig
+	app.server.InfoLog.Printf("Received signal %s, shutting down...", s.String())
 
 	app.Close()
 	app.server.InfoLog.Println("Application gracefully stopped")

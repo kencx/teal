@@ -13,7 +13,7 @@ import (
 var (
 	idleTimeout      = 60 * time.Second
 	readWriteTimeout = 3 * time.Second
-	closeTimeout     = 10 * time.Second
+	closeTimeout     = 5 * time.Second
 )
 
 type Server struct {
