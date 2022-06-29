@@ -11,9 +11,12 @@ import (
 
 // globals for tests only
 var (
-	testDSN = "./test.db"
-	testdb  = setup()
-	ts      = NewStore(testdb)
+	testDSN        = "./test.db"
+	testSchemaPath = "../migrations/schema.sql"
+	testDataPath   = "../migrations/testdata.sql"
+	dropSchemaPath = "../migrations/dropall.sql"
+	testdb         = setup()
+	ts             = NewStore(testdb)
 )
 
 func TestMain(m *testing.M) {
@@ -28,7 +31,7 @@ func setup() *sqlx.DB {
 		log.Fatal(err)
 	}
 
-	initTestDB(testdb)
+	bootstrap(testdb)
 	return testdb
 }
 
@@ -38,20 +41,26 @@ func teardown() {
 	os.Remove(testDSN)
 }
 
-func initTestDB(db *sqlx.DB) {
-	err := ExecFile(db, "../migrations/schema.sql")
+func bootstrap(db *sqlx.DB) {
+	err := ExecFile(db, testSchemaPath)
 	if err != nil {
 		log.Fatalf("initTestDB: %v", err)
 	}
-	err = ExecFile(db, "../migrations/testdata.sql")
+	err = ExecFile(db, testDataPath)
 	if err != nil {
 		log.Fatalf("initTestDB: %v", err)
 	}
 }
 
+func dropTables(db *sqlx.DB) {
+	if err := ExecFile(db, dropSchemaPath); err != nil {
+		log.Fatal(err)
+	}
+}
+
 func resetDB(db *sqlx.DB) {
 	dropTables(db)
-	initTestDB(db)
+	bootstrap(db)
 }
 
 func TestOpen(t *testing.T) {

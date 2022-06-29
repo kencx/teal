@@ -74,6 +74,7 @@ func main() {
 
 	flag.Parse()
 
+	// TODO Hard coded file path does not work with tests and binary at the same time
 	db, err := storage.Open("./test.db")
 	// db, err := storage.Open(config.dsn)
 	if err != nil {
@@ -81,11 +82,10 @@ func main() {
 	}
 
 	// init test data
-	if err := storage.ExecFile(db, "../testdata/schema.sql"); err != nil {
+	if err := storage.ExecFile(db, "../../migrations/schema.sql"); err != nil {
 		log.Fatal(err)
 	}
-
-	if err := storage.ExecFile(db, "../../storage/testdata.sql"); err != nil {
+	if err := storage.ExecFile(db, "../../migrations/testdata.sql"); err != nil {
 		log.Fatal(err)
 	}
 

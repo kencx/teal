@@ -44,9 +44,9 @@ func Open(path string) (*sqlx.DB, error) {
 	if err = db.Ping(); err != nil {
 		return nil, fmt.Errorf("db: failed to connect: %w", err)
 	}
-	if err := createTable(db); err != nil {
-		return nil, err
-	}
+	// if err := createTable(db); err != nil {
+	// 	return nil, err
+	// }
 	return db, nil
 }
 
@@ -58,17 +58,10 @@ func Close(db *sqlx.DB) error {
 }
 
 // TODO replace with migration file
+// Hard coded file path does not work with tests and binary at the same time
 func createTable(db *sqlx.DB) error {
-	if err := ExecFile(db, "../migrations/schema.sql"); err != nil {
+	if err := ExecFile(db, "../../migrations/schema.sql"); err != nil {
 		return fmt.Errorf("%v: %s", err, CREATE_TABLES)
-	}
-	return nil
-}
-
-// TODO replace with migration file
-func dropTables(db *sqlx.DB) error {
-	if err := ExecFile(db, "../migrations/dropall.sql"); err != nil {
-		return fmt.Errorf("%v: %s", err, DROP_ALL)
 	}
 	return nil
 }
