@@ -1,11 +1,8 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
-	"strconv"
 
-	"github.com/gorilla/mux"
 	"github.com/kencx/teal"
 	"github.com/kencx/teal/http/request"
 	"github.com/kencx/teal/http/response"
@@ -15,6 +12,7 @@ import (
 
 type BookStore interface {
 	Get(id int64) (*teal.Book, error)
+	GetByISBN(isbn string) (*teal.Book, error)
 	GetByTitle(title string) (*teal.Book, error)
 	GetAll() ([]*teal.Book, error)
 	Create(b *teal.Book) (*teal.Book, error)
@@ -30,7 +28,7 @@ func hasQueryParam(param string, r *http.Request) bool {
 }
 
 func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
-	id := HandleId(rw, r)
+	id := HandleInt64("id", rw, r)
 	if id == -1 {
 		return
 	}
@@ -53,6 +51,30 @@ func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	s.InfoLog.Printf("Book %d returned", id)
+	response.OK(rw, r, res)
+}
+
+func (s *Server) GetBookByISBN(rw http.ResponseWriter, r *http.Request) {
+	isbn := HandleString("isbn", r)
+
+	b, err := s.Books.GetByISBN(isbn)
+	if err == teal.ErrDoesNotExist {
+		s.InfoLog.Printf("Book %q not found", isbn)
+		response.NotFound(rw, r, err)
+		return
+
+	} else if err != nil {
+		response.InternalServerError(rw, r, err)
+		return
+	}
+
+	res, err := util.ToJSON(response.Envelope{"books": b})
+	if err != nil {
+		response.InternalServerError(rw, r, err)
+		return
+	}
+
+	s.InfoLog.Printf("Book %q returned", isbn)
 	response.OK(rw, r, res)
 }
 
@@ -122,7 +144,7 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
-	id := HandleId(rw, r)
+	id := HandleInt64("id", rw, r)
 	if id == -1 {
 		return
 	}
@@ -166,7 +188,7 @@ func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
-	id := HandleId(rw, r)
+	id := HandleInt64("id", rw, r)
 	if id == -1 {
 		return
 	}
@@ -185,16 +207,4 @@ func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
 
 	s.InfoLog.Printf("Book %d deleted", id)
 	response.OK(rw, r, nil)
-}
-
-func HandleId(rw http.ResponseWriter, r *http.Request) int64 {
-	vars := mux.Vars(r)
-
-	id, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		response.BadRequest(rw, r, fmt.Errorf("unable to process id: %v", err))
-		return -1
-	}
-
-	return int64(id)
 }

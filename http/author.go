@@ -19,7 +19,7 @@ type AuthorStore interface {
 }
 
 func (s *Server) GetAuthor(rw http.ResponseWriter, r *http.Request) {
-	id := HandleId(rw, r)
+	id := HandleInt64("id", rw, r)
 	if id == -1 {
 		return
 	}
@@ -104,7 +104,7 @@ func (s *Server) AddAuthor(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) UpdateAuthor(rw http.ResponseWriter, r *http.Request) {
-	id := HandleId(rw, r)
+	id := HandleInt64("id", rw, r)
 	if id == -1 {
 		return
 	}
@@ -148,7 +148,7 @@ func (s *Server) UpdateAuthor(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) DeleteAuthor(rw http.ResponseWriter, r *http.Request) {
-	id := HandleId(rw, r)
+	id := HandleInt64("id", rw, r)
 	if id == -1 {
 		return
 	}
