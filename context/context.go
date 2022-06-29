@@ -39,14 +39,14 @@ func GetAuthorID(ctx context.Context) (int64, error) {
 	return value, nil
 }
 
-func WithUser(ctx context.Context, value *teal.User) context.Context {
+func WithUserID(ctx context.Context, value int64) context.Context {
 	return context.WithValue(ctx, userKey, value)
 }
 
-func GetUser(ctx context.Context) (*teal.User, error) {
-	value, ok := ctx.Value(userKey).(*teal.User)
+func GetUserID(ctx context.Context) (int64, error) {
+	value, ok := ctx.Value(userKey).(int64)
 	if !ok {
-		return nil, fmt.Errorf("ctx: failed to get User from context")
+		return -1, fmt.Errorf("ctx: failed to get User from context")
 	}
 	return value, nil
 }

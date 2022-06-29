@@ -1,9 +1,9 @@
 package http
 
 import (
-	"errors"
 	"net/http"
 
+	"github.com/kencx/teal"
 	"github.com/kencx/teal/http/response"
 )
 
@@ -32,32 +32,51 @@ func (s *Server) secureHeaders(next http.Handler) http.Handler {
 // 	})
 // }
 
-var (
-	errNoAuthHeader = errors.New("no authentication headers")
-	errInvalidCreds = errors.New("invalid username or password")
-)
-
 func (s *Server) basicAuth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 
-		user, pass, ok := r.BasicAuth()
+		username, pass, ok := r.BasicAuth()
 		if !ok {
-			response.Unauthorized(w, r, errNoAuthHeader)
+			response.Unauthorized(rw, r, teal.ErrNoAuthHeader)
 			return
 		}
 
-		if !s.checkUser(user, pass) {
-			response.Unauthorized(w, r, errInvalidCreds)
+		authenticated, err := s.authenticate(username, pass)
+		if err != nil {
+			response.InternalServerError(rw, r, err)
+			return
+		}
+		if !authenticated {
+			response.Unauthorized(rw, r, teal.ErrInvalidCreds)
 			return
 		}
 
-		next.ServeHTTP(w, r)
+		// TODO save user to context
+		next.ServeHTTP(rw, r)
 	})
 }
 
 // func (s *Server) apiKeyAuth(next http.Handler) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 //
-// 		next.ServeHTTP(w, r)
+// 		authenticated, err := s.apiKeyValidation(apiKey)
+// 		// TODO check api token expired
+// 		if err != nil {
+// 			switch {
+// 			case errors.Is(err, teal.ErrAPIKeyExpired):
+// 				response.Unauthorized(rw, r, err)
+// 			default:
+// 				response.InternalServerError(rw, r, err)
+// 				return
+// 			}
+// 		}
+// 		if !authenticated {
+// 			response.Unauthorized(rw, r, teal.ErrInvalidCreds)
+// 			return
+// 		}
+//
+// 		// TODO save user to context
+//
+// 		next.ServeHTTP(rw, r)
 // 	})
 // }

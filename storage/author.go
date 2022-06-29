@@ -33,16 +33,16 @@ func (s *AuthorStore) Get(id int64) (*teal.Author, error) {
 	}
 	defer endTx(tx, err)
 
-	var dest teal.Author
+	var author teal.Author
 	stmt := `SELECT * FROM authors WHERE id=$1;`
-	err = tx.QueryRowx(stmt, id).StructScan(&dest)
+	err = tx.QueryRowx(stmt, id).StructScan(&author)
 	if err == sql.ErrNoRows {
 		return nil, teal.ErrDoesNotExist
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db: retrieve author %d failed: %v", id, err)
 	}
-	return &dest, nil
+	return &author, nil
 }
 
 func (s *AuthorStore) GetByName(name string) (*teal.Author, error) {
@@ -52,16 +52,16 @@ func (s *AuthorStore) GetByName(name string) (*teal.Author, error) {
 	}
 	defer endTx(tx, err)
 
-	var dest teal.Author
+	var author teal.Author
 	stmt := `SELECT * FROM authors WHERE name=$1;`
-	err = tx.QueryRowx(stmt, name).StructScan(&dest)
+	err = tx.QueryRowx(stmt, name).StructScan(&author)
 	if err == sql.ErrNoRows {
 		return nil, teal.ErrDoesNotExist
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db: retrieve author %q failed: %v", name, err)
 	}
-	return &dest, nil
+	return &author, nil
 }
 
 func (s *AuthorStore) GetAll() ([]*teal.Author, error) {
@@ -71,16 +71,16 @@ func (s *AuthorStore) GetAll() ([]*teal.Author, error) {
 	}
 	defer endTx(tx, err)
 
-	var dest []*teal.Author
+	var authors []*teal.Author
 	stmt := `SELECT * FROM authors;`
-	err = tx.Select(&dest, stmt)
+	err = tx.Select(&authors, stmt)
 	if err == sql.ErrNoRows {
 		return nil, teal.ErrNoRows
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db: retrieve all authors failed: %v", err)
 	}
-	return dest, nil
+	return authors, nil
 }
 
 func (s *AuthorStore) GetAllNames() ([]string, error) {
@@ -90,16 +90,16 @@ func (s *AuthorStore) GetAllNames() ([]string, error) {
 	}
 	defer endTx(tx, err)
 
-	var dest []string
+	var author []string
 	stmt := `SELECT name FROM authors;`
-	err = tx.Select(&dest, stmt)
+	err = tx.Select(&author, stmt)
 	if err == sql.ErrNoRows {
 		return nil, teal.ErrNoRows
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db: retrieve all authors names failed: %v", err)
 	}
-	return dest, nil
+	return author, nil
 }
 
 func (s *AuthorStore) Create(a *teal.Author) (*teal.Author, error) {
@@ -137,16 +137,24 @@ func (s *AuthorStore) Update(id int64, a *teal.Author) (*teal.Author, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	if err := Tx(s.db, ctx, func(tx *sqlx.Tx) error {
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
+	}
+	defer endTx(tx, err)
 
-		err := updateAuthor(tx, id, a)
-		if err != nil {
-			return err
-		}
-		return nil
+	stmt := `UPDATE authors SET name=$1 WHERE id=$2`
+	res, err := tx.Exec(stmt, a.Name, id)
 
-	}); err != nil {
-		return nil, err
+	if err != nil {
+		return nil, fmt.Errorf("db: update author %d failed: %v", id, err)
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("db: update author %d failed: %v", id, err)
+	}
+	if count == 0 {
+		return nil, errors.New("db: no authors updated")
 	}
 	return a, nil
 }
@@ -230,26 +238,6 @@ func insertOrGetAuthors(tx *sqlx.Tx, a []*teal.Author) ([]int64, error) {
 		ids = append(ids, id)
 	}
 	return ids, nil
-}
-
-func updateAuthor(tx *sqlx.Tx, id int64, a *teal.Author) error {
-
-	stmt := `UPDATE authors SET name=$1 WHERE id=$2`
-
-	res, err := tx.Exec(stmt, a.Name, id)
-	if err != nil {
-		return fmt.Errorf("db: update author %d failed: %v", id, err)
-	}
-
-	count, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("db: update author %d failed: %v", id, err)
-	}
-
-	if count == 0 {
-		return errors.New("db: no authors updated")
-	}
-	return nil
 }
 
 func deleteAuthor(tx *sqlx.Tx, id int64) error {

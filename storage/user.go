@@ -22,16 +22,16 @@ func (s *UserStore) Get(id int64) (*teal.User, error) {
 	}
 	defer endTx(tx, err)
 
-	var dest teal.User
+	var user teal.User
 	stmt := `SELECT * FROM users WHERE id=$1;`
-	err = tx.QueryRowx(stmt, id).StructScan(&dest)
+	err = tx.QueryRowx(stmt, id).StructScan(&user)
 	if err == sql.ErrNoRows {
 		return nil, teal.ErrDoesNotExist
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db: retrieve user %d failed: %v", id, err)
 	}
-	return &dest, nil
+	return &user, nil
 }
 
 func (s *UserStore) GetByUsername(name string) (*teal.User, error) {
@@ -41,16 +41,16 @@ func (s *UserStore) GetByUsername(name string) (*teal.User, error) {
 	}
 	defer endTx(tx, err)
 
-	var dest teal.User
+	var user teal.User
 	stmt := `SELECT * FROM users WHERE username=$1;`
-	err = tx.QueryRowx(stmt, name).StructScan(&dest)
+	err = tx.QueryRowx(stmt, name).StructScan(&user)
 	if err == sql.ErrNoRows {
 		return nil, teal.ErrDoesNotExist
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db: retrieve user %q failed: %v", name, err)
 	}
-	return &dest, nil
+	return &user, nil
 }
 
 func (s *UserStore) GetAll() ([]*teal.User, error) {
@@ -60,152 +60,102 @@ func (s *UserStore) GetAll() ([]*teal.User, error) {
 	}
 	defer endTx(tx, err)
 
-	var dest []*teal.User
+	var users []*teal.User
 	stmt := `SELECT * FROM users;`
-	err = tx.Select(&dest, stmt)
+	err = tx.Select(&users, stmt)
 	if err == sql.ErrNoRows {
 		return nil, teal.ErrNoRows
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db: retrieve all users failed: %v", err)
 	}
-	return dest, nil
+	return users, nil
 }
 
-// func (s *UserStore) Create(u *teal.User) (*teal.User, error) {
-// 	if err := Tx(s.db, func(tx *sqlx.Tx) error {
-//
-// 		id, err := insertOrGetUser(tx, a)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		// save id to context for querying later
-// 		ctx = tcontext.WithUser(ctx, id)
-// 		return nil
-//
-// 	}, &sql.TxOptions{}); err != nil {
-// 		return nil, err
-// 	}
-//
-// 	id, err := tcontext.GetUser(ctx)
-//
-// 	// query user after transaction committed
-// 	user, err := s.Get(id)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return user, nil
-// }
-
-func (s *UserStore) Update(id int64, a *teal.User) (*teal.User, error) {
+func (s *UserStore) Create(u *teal.User) (*teal.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	if err := Tx(s.db, ctx, func(tx *sqlx.Tx) error {
-
-		err := updateUser(tx, id, a)
-		if err != nil {
-			return err
-		}
-		return nil
-
-	}); err != nil {
-		return nil, err
-	}
-
-	user, err := s.Get(id)
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
 	}
-	return user, nil
+	defer endTx(tx, err)
+
+	stmt := `INSERT INTO users
+	(name, username, hashed_password, email, token, role, dateAdded)
+	VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id;`
+	err = tx.QueryRowx(stmt,
+		u.Name,
+		u.Username,
+		u.HashedPassword.Hash,
+		u.Email,
+		u.Token,
+		u.Role,
+		u.DateAdded).StructScan(u)
+
+	// TODO check for duplicate username, email violation
+	if err != nil {
+		return nil, fmt.Errorf("db: insert to authors table failed: %v", err)
+	}
+
+	return u, nil
+}
+
+func (s *UserStore) Update(id int64, u *teal.User) (*teal.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
+	}
+	defer endTx(tx, err)
+
+	stmt := `UPDATE users
+	SET name=$1,
+	username=$2,
+	hashed_password=$3,
+	email=$4,
+	token=$5,
+	role=$6,
+	dateAdded=$7
+	WHERE id=$8`
+
+	res, err := tx.Exec(stmt,
+		u.Name,
+		u.Username,
+		u.HashedPassword.Hash,
+		u.Email,
+		u.Token,
+		u.Role,
+		u.DateAdded,
+		id)
+
+	if err != nil {
+		return nil, fmt.Errorf("db: update user %d failed: %v", id, err)
+	}
+	// TODO check for duplicate username, email violation
+
+	count, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("db: update user %d failed: %v", id, err)
+	}
+	if count == 0 {
+		return nil, errors.New("db: no users updated")
+	}
+	return u, nil
 }
 
 func (s *UserStore) Delete(id int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	if err := Tx(s.db, ctx, func(tx *sqlx.Tx) error {
-
-		err := deleteUser(tx, id)
-		if err != nil {
-			return err
-		}
-		return nil
-
-	}); err != nil {
-		return err
-	}
-	return nil
-}
-
-// insert user. If already exists, return author id
-func insertOrGetUser(tx *sqlx.Tx, a *teal.User) (int64, error) {
-
-	stmt := `INSERT OR IGNORE INTO authors (name) VALUES ($1);`
-	res, err := tx.Exec(stmt, a.Name)
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return -1, fmt.Errorf("db: insert to authors table failed: %v", err)
+		return fmt.Errorf("db: failed to start transaction: %v", err)
 	}
-
-	n, err := res.RowsAffected()
-	if err != nil {
-		return -1, fmt.Errorf("db: insert to authors table failed: %v", err)
-	}
-
-	// no rows inserted, query to get existing id
-	if n == 0 {
-		// authors.name is unique
-		var id int64
-		stmt := `SELECT id FROM authors WHERE name=$1;`
-		err := tx.Get(&id, stmt, a.Name)
-		if err != nil {
-			return -1, fmt.Errorf("db: query existing author failed: %v", err)
-		}
-		return id, nil
-
-	} else {
-		id, err := res.LastInsertId()
-		if err != nil {
-			return -1, fmt.Errorf("db: query existing author failed: %v", err)
-		}
-		return id, nil
-	}
-}
-
-func insertOrGetUsers(tx *sqlx.Tx, a []*teal.User) ([]int64, error) {
-
-	var ids []int64
-	for _, user := range a {
-		id, err := insertOrGetUser(tx, user)
-		if err != nil {
-			return nil, err
-		}
-		ids = append(ids, id)
-	}
-	return ids, nil
-}
-
-func updateUser(tx *sqlx.Tx, id int64, a *teal.User) error {
-
-	stmt := `UPDATE users SET name=$1 WHERE id=$2`
-
-	res, err := tx.Exec(stmt, a.Name, id)
-	if err != nil {
-		return fmt.Errorf("db: update user %d failed: %v", id, err)
-	}
-
-	count, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("db: update user %d failed: %v", id, err)
-	}
-
-	if count == 0 {
-		return errors.New("db: no users updated")
-	}
-	return nil
-}
-
-func deleteUser(tx *sqlx.Tx, id int64) error {
+	defer endTx(tx, err)
 
 	stmt := `DELETE FROM users WHERE id=$1;`
 	res, err := tx.Exec(stmt, id)
@@ -220,6 +170,9 @@ func deleteUser(tx *sqlx.Tx, id int64) error {
 
 	if count == 0 {
 		return fmt.Errorf("db: user %d not removed", id)
+	}
+	if err != nil {
+		return err
 	}
 	return nil
 }

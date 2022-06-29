@@ -84,15 +84,15 @@ func (s *Server) RegisterRoutes() {
 	// ur.HandleFunc("/login", s.Login).Methods(http.MethodPost)
 	// ur.HandleFunc("/logout", s.Logout).Methods(http.MethodPost)
 
-	br.HandleFunc("/{id:[0-9]+}", s.GetBook).Methods(http.MethodGet)
+	br.HandleFunc("/{id:[0-9]+}/", s.GetBook).Methods(http.MethodGet)
 	br.HandleFunc("/", s.GetAllBooks).Methods(http.MethodGet)
+	br.HandleFunc("/", s.AddBook).Methods(http.MethodPost)
 	br.HandleFunc("/{id:[0-9]+}/", s.UpdateBook).Methods(http.MethodPut)
 	br.HandleFunc("/{id:[0-9]+}/", s.DeleteBook).Methods(http.MethodDelete)
-	br.HandleFunc("/", s.AddBook).Methods(http.MethodPost)
 
 	ar.HandleFunc("/{id:[0-9]+}/", s.GetAuthor).Methods(http.MethodGet)
 	ar.HandleFunc("/", s.GetAllAuthors).Methods(http.MethodGet)
+	ar.HandleFunc("/", s.AddAuthor).Methods(http.MethodPost)
 	ar.HandleFunc("/{id:[0-9]+}/", s.UpdateAuthor).Methods(http.MethodPut)
 	ar.HandleFunc("/{id:[0-9]+}/", s.DeleteAuthor).Methods(http.MethodDelete)
-	ar.HandleFunc("/", s.AddAuthor).Methods(http.MethodPost)
 }

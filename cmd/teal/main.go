@@ -36,6 +36,7 @@ func NewApp(config config, db *sqlx.DB) *App {
 func (a *App) Run() error {
 	a.server.Books = a.db.Books
 	a.server.Authors = a.db.Authors
+	a.server.Users = a.db.Users
 
 	a.server.InfoLog.Printf("Starting %s server on :%d", a.config.env, a.config.port)
 	if err := a.server.Run(fmt.Sprintf(":%d", a.config.port)); err != nil {
