@@ -57,17 +57,17 @@ func Close(db *sqlx.DB) error {
 	return fmt.Errorf("db: db is nil")
 }
 
+// TODO replace with migration file
 func createTable(db *sqlx.DB) error {
-	_, err := db.Exec(CREATE_TABLES)
-	if err != nil {
+	if err := ExecFile(db, "../migrations/schema.sql"); err != nil {
 		return fmt.Errorf("%v: %s", err, CREATE_TABLES)
 	}
 	return nil
 }
 
-func dropTable(db *sqlx.DB) error {
-
-	if _, err := db.Exec(DROP_ALL); err != nil {
+// TODO replace with migration file
+func dropTables(db *sqlx.DB) error {
+	if err := ExecFile(db, "../migrations/dropall.sql"); err != nil {
 		return fmt.Errorf("%v: %s", err, DROP_ALL)
 	}
 	return nil

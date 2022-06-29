@@ -13,19 +13,18 @@ type User struct {
 	ID             int64        `json:"id"`
 	Name           string       `json:"name"`
 	Username       string       `json:"username"`
-	HashedPassword password     `json:"-"`
-	Email          string       `json:"email"`
-	LastLogin      sql.NullTime `json:"last_login,omitempty"`
+	HashedPassword Password     `json:"-"`
 	Role           string       `json:"role,omitempty"`
+	LastLogin      sql.NullTime `json:"-"`
 	DateAdded      time.Time    `json:"-"`
 }
 
-type password struct {
+type Password struct {
 	Text *string
 	Hash []byte `db:"hashed_password"`
 }
 
-func (p *password) Set(text string) error {
+func (p *Password) Set(text string) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(text), 12)
 	if err != nil {
 		return err
@@ -36,7 +35,7 @@ func (p *password) Set(text string) error {
 	return nil
 }
 
-func (p *password) Matches(text string) (bool, error) {
+func (p *Password) Matches(text string) (bool, error) {
 	err := bcrypt.CompareHashAndPassword(p.Hash, []byte(text))
 
 	if err != nil {
@@ -53,7 +52,6 @@ func (p *password) Matches(text string) (bool, error) {
 func (u *User) Validate(v *validator.Validator) {
 	v.Check(u.Name != "", "name", "value is missing")
 	v.Check(u.Username != "", "username", "value is missing")
-	v.Check(u.Email != "", "email", "value is missing")
 
 	if u.HashedPassword.Text != nil {
 		ValidatePasswordText(v, *u.HashedPassword.Text)

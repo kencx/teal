@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -23,8 +24,16 @@ func (s *UserStore) Get(id int64) (*teal.User, error) {
 	defer endTx(tx, err)
 
 	var user teal.User
-	stmt := `SELECT * FROM users WHERE id=$1;`
-	err = tx.QueryRowx(stmt, id).StructScan(&user)
+	stmt := `SELECT id, name, username, hashed_password, role, dateAdded
+	FROM users WHERE id=$1;`
+	err = tx.QueryRowx(stmt, id).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Username,
+		&user.HashedPassword.Hash,
+		&user.Role,
+		&user.DateAdded,
+	)
 	if err == sql.ErrNoRows {
 		return nil, teal.ErrDoesNotExist
 	}
@@ -42,8 +51,16 @@ func (s *UserStore) GetByUsername(name string) (*teal.User, error) {
 	defer endTx(tx, err)
 
 	var user teal.User
-	stmt := `SELECT * FROM users WHERE username=$1;`
-	err = tx.QueryRowx(stmt, name).StructScan(&user)
+	stmt := `SELECT id, name, username, hashed_password, role, dateAdded
+	FROM users WHERE username=$1;`
+	err = tx.QueryRowx(stmt, name).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Username,
+		&user.HashedPassword.Hash,
+		&user.Role,
+		&user.DateAdded,
+	)
 	if err == sql.ErrNoRows {
 		return nil, teal.ErrDoesNotExist
 	}
@@ -51,25 +68,6 @@ func (s *UserStore) GetByUsername(name string) (*teal.User, error) {
 		return nil, fmt.Errorf("db: retrieve user %q failed: %v", name, err)
 	}
 	return &user, nil
-}
-
-func (s *UserStore) GetAll() ([]*teal.User, error) {
-	tx, err := s.db.Beginx()
-	if err != nil {
-		return nil, fmt.Errorf("db: failed to start transaction: %v", err)
-	}
-	defer endTx(tx, err)
-
-	var users []*teal.User
-	stmt := `SELECT * FROM users;`
-	err = tx.Select(&users, stmt)
-	if err == sql.ErrNoRows {
-		return nil, teal.ErrNoRows
-	}
-	if err != nil {
-		return nil, fmt.Errorf("db: retrieve all users failed: %v", err)
-	}
-	return users, nil
 }
 
 func (s *UserStore) Create(u *teal.User) (*teal.User, error) {
@@ -83,22 +81,22 @@ func (s *UserStore) Create(u *teal.User) (*teal.User, error) {
 	defer endTx(tx, err)
 
 	stmt := `INSERT INTO users
-	(name, username, hashed_password, email, token, role, dateAdded)
-	VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id;`
+	(name, username, hashed_password, role, dateAdded)
+	VALUES ($1, $2, $3, $4, $5) RETURNING id;`
 	err = tx.QueryRowx(stmt,
 		u.Name,
 		u.Username,
 		u.HashedPassword.Hash,
-		u.Email,
-		u.Token,
 		u.Role,
 		u.DateAdded).StructScan(u)
 
-	// TODO check for duplicate username, email violation
 	if err != nil {
-		return nil, fmt.Errorf("db: insert to authors table failed: %v", err)
+		if strings.Contains(err.Error(), "UNIQUE constraint") {
+			return nil, teal.ErrDuplicateUsername
+		} else {
+			return nil, fmt.Errorf("db: insert to users table failed: %v", err)
+		}
 	}
-
 	return u, nil
 }
 
@@ -116,26 +114,25 @@ func (s *UserStore) Update(id int64, u *teal.User) (*teal.User, error) {
 	SET name=$1,
 	username=$2,
 	hashed_password=$3,
-	email=$4,
-	token=$5,
-	role=$6,
-	dateAdded=$7
-	WHERE id=$8`
+	role=$4,
+	dateAdded=$5
+	WHERE id=$6`
 
 	res, err := tx.Exec(stmt,
 		u.Name,
 		u.Username,
 		u.HashedPassword.Hash,
-		u.Email,
-		u.Token,
 		u.Role,
 		u.DateAdded,
 		id)
 
 	if err != nil {
-		return nil, fmt.Errorf("db: update user %d failed: %v", id, err)
+		if strings.Contains(err.Error(), "UNIQUE constraint") {
+			return nil, teal.ErrDuplicateUsername
+		} else {
+			return nil, fmt.Errorf("db: update user %d failed: %v", id, err)
+		}
 	}
-	// TODO check for duplicate username, email violation
 
 	count, err := res.RowsAffected()
 	if err != nil {

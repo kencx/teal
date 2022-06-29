@@ -14,7 +14,6 @@ import (
 type UserStore interface {
 	Get(id int64) (*teal.User, error)
 	GetByUsername(username string) (*teal.User, error)
-	GetAll() ([]*teal.User, error)
 	Create(u *teal.User) (*teal.User, error)
 	Update(id int64, b *teal.User) (*teal.User, error)
 	Delete(id int64) error
@@ -38,7 +37,6 @@ func (s *Server) Register(rw http.ResponseWriter, r *http.Request) {
 	user := teal.User{
 		Name:     input.Name,
 		Username: input.Username,
-		Email:    input.Email,
 	}
 
 	err = user.HashedPassword.Set(input.Password)
@@ -59,10 +57,6 @@ func (s *Server) Register(rw http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, teal.ErrDuplicateUsername):
 			v.AddError("username", "this username already exists")
-			response.ValidationError(rw, r, v.Errors)
-			return
-		case errors.Is(err, teal.ErrDuplicateEmail):
-			v.AddError("email", "this email address already exists")
 			response.ValidationError(rw, r, v.Errors)
 			return
 		default:

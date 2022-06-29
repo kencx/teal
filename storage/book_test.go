@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"encoding/json"
 	"reflect"
 	"sort"
 	"testing"
@@ -10,12 +9,12 @@ import (
 )
 
 func TestGetBook(t *testing.T) {
-	resetDB(ts.Books.db) // reset DB
+	resetDB(testdb)
 	got, err := ts.Books.Get(testBook1.ID)
 	checkErr(t, err)
 
 	want := testBook1
-	if !compareBook(got, want) {
+	if !assertBooksEqual(got, want) {
 		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 }
@@ -25,7 +24,7 @@ func TestGetBookByISBN(t *testing.T) {
 	checkErr(t, err)
 
 	want := testBook1
-	if !compareBook(got, want) {
+	if !assertBooksEqual(got, want) {
 		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 }
@@ -35,7 +34,7 @@ func TestGetBookByTitle(t *testing.T) {
 	checkErr(t, err)
 
 	want := testBook2
-	if !compareBook(got, want) {
+	if !assertBooksEqual(got, want) {
 		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 }
@@ -70,7 +69,7 @@ func TestGetAllBooks(t *testing.T) {
 	}
 
 	for i := 0; i < len(got); i++ {
-		if !compareBook(got[i], want[i]) {
+		if !assertBooksEqual(got[i], want[i]) {
 			t.Errorf("got %v, want %v", prettyPrint(got[i]), prettyPrint(want[i]))
 		}
 	}
@@ -132,7 +131,7 @@ func TestCreateBook(t *testing.T) {
 			got, err := ts.Books.Create(tt.want)
 			checkErr(t, err)
 
-			if !compareBook(got, tt.want) {
+			if !assertBooksEqual(got, tt.want) {
 				t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(tt.want))
 			}
 
@@ -214,6 +213,8 @@ func TestCreateBookNewAndExistingAuthor(t *testing.T) {
 }
 
 func TestUpdateBookNoAuthorChange(t *testing.T) {
+	defer resetDB(testdb)
+
 	want := testBook1
 	want.NumOfPages = 999
 	want.Rating = 1
@@ -222,13 +223,13 @@ func TestUpdateBookNoAuthorChange(t *testing.T) {
 	got, err := ts.Books.Update(want.ID, want)
 	checkErr(t, err)
 
-	if !compareBook(got, want) {
+	if !assertBooksEqual(got, want) {
 		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 }
 
 func TestUpdateBookAddNewAuthor(t *testing.T) {
-	initTestDB(db) // reset DB
+	defer resetDB(testdb)
 
 	want := testBook1
 	want.Author = []string{"S.A. Corey", "Ty Franck"}
@@ -236,7 +237,7 @@ func TestUpdateBookAddNewAuthor(t *testing.T) {
 	got, err := ts.Books.Update(want.ID, want)
 	checkErr(t, err)
 
-	if !compareBook(got, want) {
+	if !assertBooksEqual(got, want) {
 		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 
@@ -245,14 +246,15 @@ func TestUpdateBookAddNewAuthor(t *testing.T) {
 }
 
 func TestUpdateBookAddExistingAuthor(t *testing.T) {
-	initTestDB(db) // reset DB
+	defer resetDB(testdb)
+
 	want := testBook1
 	want.Author = []string{"S.A. Corey", "John Doe"}
 
 	got, err := ts.Books.Update(want.ID, want)
 	checkErr(t, err)
 
-	if !compareBook(got, want) {
+	if !assertBooksEqual(got, want) {
 		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 
@@ -261,14 +263,14 @@ func TestUpdateBookAddExistingAuthor(t *testing.T) {
 }
 
 func TestUpdateBookRemoveAuthor(t *testing.T) {
-	initTestDB(db) // reset DB
+	defer resetDB(testdb)
 	want := testBook3
 	want.Author = []string{"Regina Phallange", "Ken Adams"}
 
 	got, err := ts.Books.Update(want.ID, want)
 	checkErr(t, err)
 
-	if !compareBook(got, want) {
+	if !assertBooksEqual(got, want) {
 		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 
@@ -281,14 +283,15 @@ func TestUpdateBookRemoveAuthor(t *testing.T) {
 }
 
 func TestUpdateBookRemoveAuthorCompletely(t *testing.T) {
-	initTestDB(db) // reset DB
+	defer resetDB(testdb)
+
 	want := testBook3
 	want.Author = []string{"John Doe", "Regina Phallange"}
 
 	got, err := ts.Books.Update(want.ID, want)
 	checkErr(t, err)
 
-	if !compareBook(got, want) {
+	if !assertBooksEqual(got, want) {
 		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 
@@ -303,14 +306,15 @@ func TestUpdateBookRemoveAuthorCompletely(t *testing.T) {
 }
 
 func TestUpdateBookRenameAuthor(t *testing.T) {
-	initTestDB(db) // reset DB
+	defer resetDB(testdb)
+
 	want := testBook4
 	want.Author = []string{"John Adams"}
 
 	got, err := ts.Books.Update(want.ID, want)
 	checkErr(t, err)
 
-	if !compareBook(got, want) {
+	if !assertBooksEqual(got, want) {
 		t.Errorf("got %v, want %v", prettyPrint(got), prettyPrint(want))
 	}
 
@@ -376,7 +380,8 @@ func TestDeleteBook(t *testing.T) {
 }
 
 func TestDeleteBookEnsureAuthorRemainsForExistingBooks(t *testing.T) {
-	initTestDB(db) // reset db
+	defer resetDB(testdb)
+
 	err := ts.Books.Delete(testBook3.ID)
 	checkErr(t, err)
 
@@ -456,33 +461,11 @@ func assertBookAuthorRelationship(t *testing.T, book *teal.Book) {
 	}
 }
 
-func compareBook(a, b *teal.Book) bool {
-	author := reflect.DeepEqual(a.Author, b.Author)
+func assertBooksEqual(a, b *teal.Book) bool {
+	authorEqual := reflect.DeepEqual(a.Author, b.Author)
 	return (a.Title == b.Title &&
 		a.ISBN == b.ISBN &&
 		a.NumOfPages == b.NumOfPages &&
 		a.State == b.State &&
-		a.Rating == b.Rating && author)
-}
-
-func checkErr(t *testing.T, err error) {
-	t.Helper()
-	if err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
-}
-
-// pretty prints structs for readability
-func prettyPrint(i interface{}) string {
-	s, _ := json.MarshalIndent(i, "", "\t")
-	return string(s)
-}
-
-func contains(s []string, a string) bool {
-	for _, b := range s {
-		if a == b {
-			return true
-		}
-	}
-	return false
+		a.Rating == b.Rating && authorEqual)
 }

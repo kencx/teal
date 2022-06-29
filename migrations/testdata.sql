@@ -1,5 +1,5 @@
 -- ORDER MATTERS, APPEND NEW DATA TO END
--- remember to add structs to schema.go as well
+-- remember to add structs to testdata.go as well
 
 -- book 1
 INSERT INTO books (
@@ -61,3 +61,11 @@ INSERT INTO books_authors (
 	book_id, author_id
 	) VALUES
 	((SELECT id FROM books WHERE title = "New Book"), (SELECT id FROM authors WHERE name = "John Doe"));
+
+-- user 1, 2
+INSERT INTO users (
+	name, username, hashed_password
+) VALUES
+	("John Doe", "johndoe", "abc123456789"),
+	("Ben Adams", "benadams", "abc123456789");
+

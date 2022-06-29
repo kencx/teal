@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 	"testing"
@@ -8,42 +9,48 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// globals for tests only
 var (
-	db = setup()
-	ts = NewStore(db)
+	testDSN = "./test.db"
+	testdb  = setup()
+	ts      = NewStore(testdb)
 )
 
 func TestMain(m *testing.M) {
-	defer func() {
-		dropTable(db)
-		Close(db)
-		os.Remove("./test.db")
-	}()
-	os.Exit(m.Run())
+	code := m.Run()
+	teardown()
+	os.Exit(code)
 }
 
 func setup() *sqlx.DB {
-	db, err := Open("./test.db")
+	testdb, err := Open(testDSN)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	initTestDB(db)
-	return db
+	initTestDB(testdb)
+	return testdb
+}
+
+func teardown() {
+	dropTables(testdb)
+	Close(testdb)
+	os.Remove(testDSN)
 }
 
 func initTestDB(db *sqlx.DB) {
-	err := ExecFile(db, "./schema.sql")
+	err := ExecFile(db, "../migrations/schema.sql")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("initTestDB: %v", err)
 	}
-	err = ExecFile(db, "./testdata.sql")
+	err = ExecFile(db, "../migrations/testdata.sql")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("initTestDB: %v", err)
 	}
 }
 
 func resetDB(db *sqlx.DB) {
+	dropTables(db)
 	initTestDB(db)
 }
 
@@ -63,4 +70,26 @@ func TestOpen(t *testing.T) {
 			t.Error("expected error: connection string required")
 		}
 	})
+}
+
+func checkErr(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+}
+
+// pretty prints structs for readability
+func prettyPrint(i interface{}) string {
+	s, _ := json.MarshalIndent(i, "", "\t")
+	return string(s)
+}
+
+func contains(s []string, a string) bool {
+	for _, b := range s {
+		if a == b {
+			return true
+		}
+	}
+	return false
 }

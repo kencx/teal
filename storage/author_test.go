@@ -76,7 +76,6 @@ func TestGetAllAuthors(t *testing.T) {
 // }
 
 func TestCreateAuthor(t *testing.T) {
-
 	want := &teal.Author{Name: "FooBar"}
 
 	got, err := ts.Authors.Create(want)
@@ -87,8 +86,7 @@ func TestCreateAuthor(t *testing.T) {
 	}
 }
 
-func TestInsertAuthorDuplicates(t *testing.T) {
-
+func TestCreateAuthorDuplicates(t *testing.T) {
 	tx, err := ts.Authors.db.Beginx()
 	if err != nil {
 		t.Errorf("db: failed to start transaction: %v", err)
@@ -114,6 +112,7 @@ func TestInsertAuthorDuplicates(t *testing.T) {
 }
 
 func TestUpdateAuthor(t *testing.T) {
+	defer resetDB(testdb)
 
 	want := testAuthor1
 	want.Name = "John Watson"
@@ -127,7 +126,6 @@ func TestUpdateAuthor(t *testing.T) {
 }
 
 func TestUpdateAuthorExisting(t *testing.T) {
-
 	want := testAuthor1
 	want.Name = "John Doe"
 
@@ -138,7 +136,6 @@ func TestUpdateAuthorExisting(t *testing.T) {
 }
 
 func TestDeleteAuthor(t *testing.T) {
-
 	err := ts.Authors.Delete(testAuthor1.ID)
 	checkErr(t, err)
 
