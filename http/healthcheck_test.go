@@ -7,12 +7,14 @@ import (
 )
 
 func TestHealthcheck(t *testing.T) {
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
+	tc := &testCase{
+		method: http.MethodGet,
+		url:    "/health",
+		data:   nil,
+		params: nil,
+		fn:     testServer.Healthcheck,
 	}
-
-	w, err := getResponse("/health", s.Healthcheck)
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	var env map[string]health

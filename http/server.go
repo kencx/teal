@@ -79,9 +79,10 @@ func (s *Server) RegisterRoutes() {
 	br := api.PathPrefix("/books").Subrouter()
 	ar := api.PathPrefix("/authors").Subrouter()
 
-	ur.HandleFunc("/register", s.Register).Methods(http.MethodPost)
-	ur.HandleFunc("/login", s.Login).Methods(http.MethodPost)
-	ur.HandleFunc("/logout", s.Logout).Methods(http.MethodPost)
+	ur.HandleFunc("/register/", s.Register).Methods(http.MethodPost)
+
+	// ur.HandleFunc("/login", s.Login).Methods(http.MethodPost)
+	// ur.HandleFunc("/logout", s.Logout).Methods(http.MethodPost)
 
 	br.HandleFunc("/{id:[0-9]+}", s.GetBook).Methods(http.MethodGet)
 	br.HandleFunc("/", s.GetAllBooks).Methods(http.MethodGet)

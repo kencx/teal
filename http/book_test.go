@@ -1,16 +1,10 @@
 package http
 
 import (
-	"bytes"
 	"encoding/json"
-	"io"
-	"log"
 	"net/http"
-	"net/http/httptest"
-	"reflect"
 	"testing"
 
-	"github.com/gorilla/mux"
 	"github.com/kencx/teal"
 	"github.com/kencx/teal/mock"
 	"github.com/kencx/teal/util"
@@ -33,23 +27,23 @@ var (
 		ISBN:   "102",
 	}
 	testBooks = []*teal.Book{testBook1, testBook2, testBook3}
-
-	testInfoLog = log.New(io.Discard, "", log.LstdFlags)
-	testErrLog  = log.New(io.Discard, "", log.LstdFlags)
 )
 
 func TestGetBook(t *testing.T) {
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Books: &mock.BookStore{
-			GetBookFn: func(id int64) (*teal.Book, error) {
-				return testBook1, nil
-			},
+	testServer.Books = &mock.BookStore{
+		GetBookFn: func(id int64) (*teal.Book, error) {
+			return testBook1, nil
 		},
 	}
 
-	w, err := getResponse("/api/books/1", s.GetBook)
+	tc := &testCase{
+		method: http.MethodGet,
+		url:    "/api/books/1",
+		data:   nil,
+		params: map[string]string{"id": "1"},
+		fn:     testServer.GetBook,
+	}
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	var env map[string]*teal.Book
@@ -65,17 +59,21 @@ func TestGetBook(t *testing.T) {
 }
 
 func TestGetBookNil(t *testing.T) {
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Books: &mock.BookStore{
-			GetBookFn: func(id int64) (*teal.Book, error) {
-				return nil, teal.ErrDoesNotExist
-			},
+	testServer.Books = &mock.BookStore{
+		GetBookFn: func(id int64) (*teal.Book, error) {
+			return nil, teal.ErrDoesNotExist
 		},
 	}
 
-	w, err := getResponse("/api/books/1", s.GetBook)
+	tc := &testCase{
+		method: http.MethodGet,
+		url:    "/api/books/1",
+		data:   nil,
+		params: map[string]string{"id": "1"},
+		fn:     testServer.GetBook,
+	}
+
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	var env map[string]string
@@ -88,17 +86,21 @@ func TestGetBookNil(t *testing.T) {
 }
 
 func TestGetAllBooks(t *testing.T) {
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Books: &mock.BookStore{
-			GetAllBooksFn: func() ([]*teal.Book, error) {
-				return testBooks, nil
-			},
+	testServer.Books = &mock.BookStore{
+		GetAllBooksFn: func() ([]*teal.Book, error) {
+			return testBooks, nil
 		},
 	}
 
-	w, err := getResponse("/api/books", s.GetAllBooks)
+	tc := &testCase{
+		method: http.MethodGet,
+		url:    "/api/books/",
+		data:   nil,
+		params: nil,
+		fn:     testServer.GetAllBooks,
+	}
+
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	var env map[string][]*teal.Book
@@ -116,33 +118,41 @@ func TestGetAllBooks(t *testing.T) {
 }
 
 func TestGetAllBooksNil(t *testing.T) {
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Books: &mock.BookStore{
-			GetAllBooksFn: func() ([]*teal.Book, error) {
-				return nil, teal.ErrNoRows
-			},
+	testServer.Books = &mock.BookStore{
+		GetAllBooksFn: func() ([]*teal.Book, error) {
+			return nil, teal.ErrNoRows
 		},
 	}
 
-	w, err := getResponse("/api/books", s.GetAllBooks)
-	checkErr(t, err)
+	tc := &testCase{
+		method: http.MethodGet,
+		url:    "/api/books/",
+		data:   nil,
+		params: nil,
+		fn:     testServer.GetAllBooks,
+	}
 
+	w, err := testResponse(t, tc)
+	checkErr(t, err)
 	assertEqual(t, w.Code, http.StatusNoContent)
 }
 
 func TestQueryBooksFromAuthor(t *testing.T) {
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Books: &mock.BookStore{
-			GetByAuthorFn: func(name string) ([]*teal.Book, error) {
-				return testBooks, nil
-			},
-		}}
+	testServer.Books = &mock.BookStore{
+		GetByAuthorFn: func(name string) ([]*teal.Book, error) {
+			return testBooks, nil
+		},
+	}
 
-	w, err := getResponse("/api/books/?author=John+Doe", s.GetAllBooks)
+	tc := &testCase{
+		method: http.MethodGet,
+		url:    "/api/books/?author=John+Doe",
+		data:   nil,
+		params: nil,
+		fn:     testServer.GetAllBooks,
+	}
+
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	var env map[string][]*teal.Book
@@ -155,18 +165,22 @@ func TestQueryBooksFromAuthor(t *testing.T) {
 }
 
 func TestNilQueryBooksFromAuthor(t *testing.T) {
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Books: &mock.BookStore{
-			GetByAuthorFn: func(name string) ([]*teal.Book, error) {
-				return nil, teal.ErrNoRows
-			},
-		}}
+	testServer.Books = &mock.BookStore{
+		GetByAuthorFn: func(name string) ([]*teal.Book, error) {
+			return nil, teal.ErrNoRows
+		},
+	}
 
-	w, err := getResponse("/api/books/?author=John+Doe", s.GetAllBooks)
+	tc := &testCase{
+		method: http.MethodGet,
+		url:    "/api/books/?author=John+Doe",
+		data:   nil,
+		params: nil,
+		fn:     testServer.GetAllBooks,
+	}
+
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
-
 	assertEqual(t, w.Code, http.StatusNoContent)
 }
 
@@ -174,16 +188,21 @@ func TestAddBook(t *testing.T) {
 	want, err := util.ToJSON(testBook1)
 	checkErr(t, err)
 
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Books: &mock.BookStore{
-			CreateBookFn: func(b *teal.Book) (*teal.Book, error) {
-				return testBook1, nil
-			},
-		}}
+	testServer.Books = &mock.BookStore{
+		CreateBookFn: func(b *teal.Book) (*teal.Book, error) {
+			return testBook1, nil
+		},
+	}
 
-	w, err := postResponse("/api/books", bytes.NewReader(want), s.AddBook)
+	tc := &testCase{
+		method: http.MethodPost,
+		url:    "/api/books",
+		data:   want,
+		params: nil,
+		fn:     testServer.AddBook,
+	}
+
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	var env map[string]*teal.Book
@@ -207,16 +226,21 @@ func TestAddBookFailValidation(t *testing.T) {
 	want, err := util.ToJSON(failBook)
 	checkErr(t, err)
 
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Books: &mock.BookStore{
-			CreateBookFn: func(b *teal.Book) (*teal.Book, error) {
-				return failBook, nil
-			},
-		}}
+	testServer.Books = &mock.BookStore{
+		CreateBookFn: func(b *teal.Book) (*teal.Book, error) {
+			return failBook, nil
+		},
+	}
 
-	w, err := postResponse("/api/books", bytes.NewBuffer(want), s.AddBook)
+	tc := &testCase{
+		method: http.MethodPost,
+		url:    "/api/books",
+		data:   want,
+		params: nil,
+		fn:     testServer.AddBook,
+	}
+
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	// check validation error
@@ -238,15 +262,21 @@ func TestUpdateBook(t *testing.T) {
 	want, err := util.ToJSON(testBook2)
 	checkErr(t, err)
 
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Books: &mock.BookStore{
-			UpdateBookFn: func(id int64, b *teal.Book) (*teal.Book, error) {
-				return testBook2, nil
-			},
-		}}
-	w, err := putResponse("/api/books/1", bytes.NewBuffer(want), s.UpdateBook)
+	testServer.Books = &mock.BookStore{
+		UpdateBookFn: func(id int64, b *teal.Book) (*teal.Book, error) {
+			return testBook2, nil
+		},
+	}
+
+	tc := &testCase{
+		method: http.MethodPut,
+		url:    "/api/books/1",
+		data:   want,
+		params: map[string]string{"id": "1"},
+		fn:     testServer.UpdateBook,
+	}
+
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	var env map[string]*teal.Book
@@ -265,17 +295,21 @@ func TestUpdateBookNil(t *testing.T) {
 	want, err := util.ToJSON(testBook2)
 	checkErr(t, err)
 
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Books: &mock.BookStore{
-			UpdateBookFn: func(id int64, b *teal.Book) (*teal.Book, error) {
-				return nil, teal.ErrDoesNotExist
-			},
+	testServer.Books = &mock.BookStore{
+		UpdateBookFn: func(id int64, b *teal.Book) (*teal.Book, error) {
+			return nil, teal.ErrDoesNotExist
 		},
 	}
 
-	w, err := putResponse("/api/books/10", bytes.NewBuffer(want), s.UpdateBook)
+	tc := &testCase{
+		method: http.MethodPut,
+		url:    "/api/books/10",
+		data:   want,
+		params: map[string]string{"id": "10"},
+		fn:     testServer.UpdateBook,
+	}
+
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	var env map[string]string
@@ -296,16 +330,21 @@ func TestUpdateBookFailValidation(t *testing.T) {
 	want, err := util.ToJSON(failBook)
 	checkErr(t, err)
 
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Books: &mock.BookStore{
-			UpdateBookFn: func(id int64, b *teal.Book) (*teal.Book, error) {
-				return failBook, nil
-			},
-		}}
+	testServer.Books = &mock.BookStore{
+		UpdateBookFn: func(id int64, b *teal.Book) (*teal.Book, error) {
+			return failBook, nil
+		},
+	}
 
-	w, err := putResponse("/api/books/1", bytes.NewBuffer(want), s.UpdateBook)
+	tc := &testCase{
+		method: http.MethodPut,
+		url:    "/api/books/1",
+		data:   want,
+		params: map[string]string{"id": "1"},
+		fn:     testServer.UpdateBook,
+	}
+
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	// check validation error
@@ -325,16 +364,21 @@ func TestUpdateBookFailValidation(t *testing.T) {
 
 func TestDeleteBook(t *testing.T) {
 
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Books: &mock.BookStore{
-			DeleteBookFn: func(id int64) error {
-				return nil
-			},
-		}}
+	testServer.Books = &mock.BookStore{
+		DeleteBookFn: func(id int64) error {
+			return nil
+		},
+	}
 
-	w, err := deleteResponse("/api/books/1", s.DeleteBook)
+	tc := &testCase{
+		method: http.MethodDelete,
+		url:    "/api/books/1",
+		data:   nil,
+		params: map[string]string{"id": "1"},
+		fn:     testServer.DeleteBook,
+	}
+
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	assertEqual(t, w.Code, http.StatusOK)
@@ -342,17 +386,21 @@ func TestDeleteBook(t *testing.T) {
 
 func TestDeleteBookNil(t *testing.T) {
 
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Books: &mock.BookStore{
-			DeleteBookFn: func(id int64) error {
-				return teal.ErrDoesNotExist
-			},
+	testServer.Books = &mock.BookStore{
+		DeleteBookFn: func(id int64) error {
+			return teal.ErrDoesNotExist
 		},
 	}
 
-	w, err := deleteResponse("/api/books/10", s.DeleteBook)
+	tc := &testCase{
+		method: http.MethodDelete,
+		url:    "/api/books/10",
+		data:   nil,
+		params: map[string]string{"id": "10"},
+		fn:     testServer.DeleteBook,
+	}
+
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	var env map[string]string
@@ -362,72 +410,4 @@ func TestDeleteBookNil(t *testing.T) {
 	got := env["error"]
 	assertEqual(t, w.Code, http.StatusNotFound)
 	assertEqual(t, got, "the item does not exist")
-}
-
-func getResponse(url string, f func(http.ResponseWriter, *http.Request)) (*httptest.ResponseRecorder, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	w := httptest.NewRecorder()
-	req = mux.SetURLVars(req, map[string]string{"id": "1"})
-
-	http.HandlerFunc(f).ServeHTTP(w, req)
-	return w, nil
-}
-
-func deleteResponse(url string, f func(http.ResponseWriter, *http.Request)) (*httptest.ResponseRecorder, error) {
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	w := httptest.NewRecorder()
-	req = mux.SetURLVars(req, map[string]string{"id": "1"})
-
-	http.HandlerFunc(f).ServeHTTP(w, req)
-	return w, nil
-}
-
-func postResponse(url string, data io.Reader, f func(http.ResponseWriter, *http.Request)) (*httptest.ResponseRecorder, error) {
-
-	req, err := http.NewRequest(http.MethodPost, url, data)
-	if err != nil {
-		return nil, err
-	}
-	w := httptest.NewRecorder()
-
-	http.HandlerFunc(f).ServeHTTP(w, req)
-	return w, nil
-}
-
-func putResponse(url string, data io.Reader, f func(http.ResponseWriter, *http.Request)) (*httptest.ResponseRecorder, error) {
-
-	req, err := http.NewRequest(http.MethodPut, url, data)
-	if err != nil {
-		return nil, err
-	}
-	w := httptest.NewRecorder()
-	req = mux.SetURLVars(req, map[string]string{"id": "1"})
-
-	http.HandlerFunc(f).ServeHTTP(w, req)
-	return w, nil
-}
-
-func assertEqual[T comparable](t *testing.T, got, want T) {
-	if got != want {
-		t.Errorf("got %v, want %v", got, want)
-	}
-}
-
-func assertObjectEqual(t *testing.T, got, want interface{}) {
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v, want %v", got, want)
-	}
-}
-
-func checkErr(t *testing.T, err error) {
-	t.Helper()
-	if err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
 }

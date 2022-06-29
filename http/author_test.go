@@ -1,7 +1,6 @@
 package http
 
 import (
-	"bytes"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -22,17 +21,20 @@ var (
 )
 
 func TestGetAuthor(t *testing.T) {
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Authors: &mock.AuthorStore{
-			GetAuthorFn: func(id int64) (*teal.Author, error) {
-				return testAuthor1, nil
-			},
+	testServer.Authors = &mock.AuthorStore{
+		GetAuthorFn: func(id int64) (*teal.Author, error) {
+			return testAuthor1, nil
 		},
 	}
 
-	w, err := getResponse("/api/authors/1", s.GetAuthor)
+	tc := &testCase{
+		method: http.MethodGet,
+		url:    "/api/authors/1",
+		data:   nil,
+		params: map[string]string{"id": "1"},
+		fn:     testServer.GetAuthor,
+	}
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	var env map[string]*teal.Author
@@ -46,17 +48,21 @@ func TestGetAuthor(t *testing.T) {
 }
 
 func TestGetAllAuthors(t *testing.T) {
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Authors: &mock.AuthorStore{
-			GetAllAuthorsFn: func() ([]*teal.Author, error) {
-				return testAuthors, nil
-			},
+
+	testServer.Authors = &mock.AuthorStore{
+		GetAllAuthorsFn: func() ([]*teal.Author, error) {
+			return testAuthors, nil
 		},
 	}
 
-	w, err := getResponse("/api/authors/", s.GetAllAuthors)
+	tc := &testCase{
+		method: http.MethodGet,
+		url:    "/api/authors/",
+		data:   nil,
+		params: nil,
+		fn:     testServer.GetAllAuthors,
+	}
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	var env map[string][]*teal.Author
@@ -75,17 +81,20 @@ func TestAddAuthor(t *testing.T) {
 	want, err := util.ToJSON(testAuthor1)
 	checkErr(t, err)
 
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Authors: &mock.AuthorStore{
-			CreateAuthorFn: func(a *teal.Author) (*teal.Author, error) {
-				return testAuthor1, nil
-			},
+	testServer.Authors = &mock.AuthorStore{
+		CreateAuthorFn: func(a *teal.Author) (*teal.Author, error) {
+			return testAuthor1, nil
 		},
 	}
 
-	w, err := postResponse("/api/authors/", bytes.NewBuffer(want), s.AddAuthor)
+	tc := &testCase{
+		method: http.MethodPost,
+		url:    "/api/authors/",
+		data:   want,
+		params: nil,
+		fn:     testServer.AddAuthor,
+	}
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	var env map[string]*teal.Author
@@ -102,17 +111,20 @@ func TestUpdateAuthor(t *testing.T) {
 	want, err := util.ToJSON(testAuthor2)
 	checkErr(t, err)
 
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Authors: &mock.AuthorStore{
-			UpdateAuthorFn: func(id int64, a *teal.Author) (*teal.Author, error) {
-				return testAuthor2, nil
-			},
+	testServer.Authors = &mock.AuthorStore{
+		UpdateAuthorFn: func(id int64, a *teal.Author) (*teal.Author, error) {
+			return testAuthor2, nil
 		},
 	}
 
-	w, err := putResponse("/api/authors/1", bytes.NewBuffer(want), s.UpdateAuthor)
+	tc := &testCase{
+		method: http.MethodPut,
+		url:    "/api/authors/1",
+		data:   want,
+		params: map[string]string{"id": "1"},
+		fn:     testServer.UpdateAuthor,
+	}
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
 
 	var env map[string]*teal.Author
@@ -126,18 +138,21 @@ func TestUpdateAuthor(t *testing.T) {
 }
 
 func TestDeleteAuthor(t *testing.T) {
-	s := Server{
-		InfoLog: testInfoLog,
-		ErrLog:  testErrLog,
-		Authors: &mock.AuthorStore{
-			DeleteAuthorFn: func(id int64) error {
-				return nil
-			},
+
+	testServer.Authors = &mock.AuthorStore{
+		DeleteAuthorFn: func(id int64) error {
+			return nil
 		},
 	}
 
-	w, err := deleteResponse("/api/authors/1", s.DeleteAuthor)
+	tc := &testCase{
+		method: http.MethodDelete,
+		url:    "/api/authors/1",
+		data:   nil,
+		params: map[string]string{"id": "1"},
+		fn:     testServer.DeleteAuthor,
+	}
+	w, err := testResponse(t, tc)
 	checkErr(t, err)
-
 	assertEqual(t, w.Code, http.StatusOK)
 }
