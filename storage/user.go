@@ -30,7 +30,7 @@ func (s *UserStore) Get(id int64) (*teal.User, error) {
 		&user.ID,
 		&user.Name,
 		&user.Username,
-		&user.HashedPassword.Hash,
+		&user.HashedPassword,
 		&user.Role,
 		&user.DateAdded,
 	)
@@ -57,7 +57,7 @@ func (s *UserStore) GetByUsername(name string) (*teal.User, error) {
 		&user.ID,
 		&user.Name,
 		&user.Username,
-		&user.HashedPassword.Hash,
+		&user.HashedPassword,
 		&user.Role,
 		&user.DateAdded,
 	)
@@ -86,7 +86,7 @@ func (s *UserStore) Create(u *teal.User) (*teal.User, error) {
 	err = tx.QueryRowx(stmt,
 		u.Name,
 		u.Username,
-		u.HashedPassword.Hash,
+		u.HashedPassword,
 		u.Role,
 		u.DateAdded).StructScan(u)
 
@@ -121,7 +121,7 @@ func (s *UserStore) Update(id int64, u *teal.User) (*teal.User, error) {
 	res, err := tx.Exec(stmt,
 		u.Name,
 		u.Username,
-		u.HashedPassword.Hash,
+		u.HashedPassword,
 		u.Role,
 		u.DateAdded,
 		id)

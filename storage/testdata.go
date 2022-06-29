@@ -115,7 +115,7 @@ var (
 		ID:             1,
 		Name:           "John Doe",
 		Username:       "johndoe",
-		HashedPassword: teal.Password{Hash: []byte("abc123456789")},
+		HashedPassword: []byte("abc123456789"),
 		Role:           "user",
 	}
 
@@ -123,7 +123,7 @@ var (
 		ID:             2,
 		Name:           "Ben Adams",
 		Username:       "benadams",
-		HashedPassword: teal.Password{Hash: []byte("abc123456789")},
+		HashedPassword: []byte("abc123456789"),
 		Role:           "user",
 	}
 )

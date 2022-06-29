@@ -23,6 +23,15 @@ type AuthorStore struct {
 	DeleteAuthorFn  func(id int64) error
 }
 
+type UserStore struct {
+	GetUserFn           func(id int64) (*teal.User, error)
+	GetUserByUsernameFn func(username string) (*teal.User, error)
+	GetAllUsersFn       func() ([]*teal.User, error)
+	CreateUserFn        func(a *teal.User) (*teal.User, error)
+	UpdateUserFn        func(id int64, a *teal.User) (*teal.User, error)
+	DeleteUserFn        func(id int64) error
+}
+
 func (m *BookStore) Get(id int64) (*teal.Book, error) {
 	return m.GetBookFn(id)
 }
@@ -57,24 +66,42 @@ func (m *BookStore) GetByAuthor(name string) ([]*teal.Book, error) {
 
 func (m *AuthorStore) Get(id int64) (*teal.Author, error) {
 	return m.GetAuthorFn(id)
-
 }
 
 func (m *AuthorStore) GetAll() ([]*teal.Author, error) {
 	return m.GetAllAuthorsFn()
-
 }
 
 func (m *AuthorStore) Create(a *teal.Author) (*teal.Author, error) {
 	return m.CreateAuthorFn(a)
-
 }
 
 func (m *AuthorStore) Update(id int64, a *teal.Author) (*teal.Author, error) {
 	return m.UpdateAuthorFn(id, a)
-
 }
 
 func (m *AuthorStore) Delete(id int64) error {
 	return m.DeleteAuthorFn(id)
+}
+
+func (m *UserStore) Get(id int64) (*teal.User, error) {
+	return m.GetUserFn(id)
+}
+
+func (m *UserStore) GetByUsername(username string) (*teal.User, error) {
+	return m.GetUserByUsernameFn(username)
+}
+
+func (m *UserStore) Create(a *teal.User) (*teal.User, error) {
+	return m.CreateUserFn(a)
+
+}
+
+func (m *UserStore) Update(id int64, a *teal.User) (*teal.User, error) {
+	return m.UpdateUserFn(id, a)
+
+}
+
+func (m *UserStore) Delete(id int64) error {
+	return m.DeleteUserFn(id)
 }

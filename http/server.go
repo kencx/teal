@@ -76,13 +76,11 @@ func (s *Server) RegisterRoutes() {
 	// api.Use(s.basicAuth)
 
 	ur := api.PathPrefix("/users").Subrouter()
-	br := api.PathPrefix("/books").Subrouter()
-	ar := api.PathPrefix("/authors").Subrouter()
-
 	ur.HandleFunc("/{id:[0-9]+}/", s.GetUser).Methods(http.MethodGet)
 	ur.HandleFunc("/{username}/", s.GetUserByUsername).Methods(http.MethodGet)
 	ur.HandleFunc("/register/", s.Register).Methods(http.MethodPost)
 
+	br := api.PathPrefix("/books").Subrouter()
 	br.HandleFunc("/{id:[0-9]+}/", s.GetBook).Methods(http.MethodGet)
 	br.HandleFunc("/{isbn}/", s.GetBookByISBN).Methods(http.MethodGet)
 	br.HandleFunc("/", s.GetAllBooks).Methods(http.MethodGet)
@@ -90,6 +88,7 @@ func (s *Server) RegisterRoutes() {
 	br.HandleFunc("/{id:[0-9]+}/", s.UpdateBook).Methods(http.MethodPut)
 	br.HandleFunc("/{id:[0-9]+}/", s.DeleteBook).Methods(http.MethodDelete)
 
+	ar := api.PathPrefix("/authors").Subrouter()
 	ar.HandleFunc("/{id:[0-9]+}/", s.GetAuthor).Methods(http.MethodGet)
 	ar.HandleFunc("/", s.GetAllAuthors).Methods(http.MethodGet)
 	ar.HandleFunc("/", s.AddAuthor).Methods(http.MethodPost)

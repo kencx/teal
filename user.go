@@ -13,30 +13,32 @@ type User struct {
 	ID             int64        `json:"id"`
 	Name           string       `json:"name"`
 	Username       string       `json:"username"`
-	HashedPassword Password     `json:"-"`
-	Role           string       `json:"role,omitempty"`
+	HashedPassword []byte       `json:"-"`
+	Role           string       `json:"role"`
 	LastLogin      sql.NullTime `json:"-"`
 	DateAdded      time.Time    `json:"-"`
 }
 
-type Password struct {
-	Text *string
-	Hash []byte `db:"hashed_password"`
+// Destination struct for POST user requests
+type InputUser struct {
+	Name     string
+	Username string
+	Password string
+	Role     string
 }
 
-func (p *Password) Set(text string) error {
+func (u *User) SetPassword(text string) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(text), 12)
 	if err != nil {
 		return err
 	}
 
-	p.Text = &text
-	p.Hash = hash
+	u.HashedPassword = hash
 	return nil
 }
 
-func (p *Password) Matches(text string) (bool, error) {
-	err := bcrypt.CompareHashAndPassword(p.Hash, []byte(text))
+func (u *User) PasswordMatches(text string) (bool, error) {
+	err := bcrypt.CompareHashAndPassword(u.HashedPassword, []byte(text))
 
 	if err != nil {
 		switch {
@@ -49,20 +51,9 @@ func (p *Password) Matches(text string) (bool, error) {
 	return true, nil
 }
 
-func (u *User) Validate(v *validator.Validator) {
+func (u *InputUser) Validate(v *validator.Validator) {
 	v.Check(u.Name != "", "name", "value is missing")
 	v.Check(u.Username != "", "username", "value is missing")
-
-	if u.HashedPassword.Text != nil {
-		ValidatePasswordText(v, *u.HashedPassword.Text)
-	}
-
-	if u.HashedPassword.Hash == nil {
-		panic("missing password hash for user")
-	}
-}
-
-func ValidatePasswordText(v *validator.Validator, password string) {
-	v.Check(password != "", "password", "value is missing")
-	v.Check(len(password) >= 8, "password", "must be at least 8 chars long")
+	v.Check(u.Password != "", "password", "value is missing")
+	v.Check(len(u.Password) >= 8, "password", "must be at least 8 chars long")
 }

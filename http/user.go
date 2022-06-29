@@ -19,18 +19,71 @@ type UserStore interface {
 	Delete(id int64) error
 }
 
-func (s *Server) Register(rw http.ResponseWriter, r *http.Request) {
-
-	var input struct {
-		Name     string
-		Username string
-		Email    string
-		Password string
+func (s *Server) GetUser(rw http.ResponseWriter, r *http.Request) {
+	id := HandleInt64("id", rw, r)
+	if id == -1 {
+		return
 	}
 
+	a, err := s.Users.Get(id)
+	if err == teal.ErrDoesNotExist {
+		s.InfoLog.Printf("User %d not found", id)
+		response.NotFound(rw, r, err)
+		return
+
+	} else if err != nil {
+		response.InternalServerError(rw, r, err)
+		return
+	}
+
+	res, err := util.ToJSON(response.Envelope{"users": a})
+	if err != nil {
+		response.InternalServerError(rw, r, err)
+		return
+	}
+
+	s.InfoLog.Printf("User %d returned", id)
+	response.OK(rw, r, res)
+}
+
+func (s *Server) GetUserByUsername(rw http.ResponseWriter, r *http.Request) {
+	username := HandleString("username", r)
+
+	u, err := s.Users.GetByUsername(username)
+	if err == teal.ErrDoesNotExist {
+		s.InfoLog.Printf("User %q not found", username)
+		response.NotFound(rw, r, err)
+		return
+
+	} else if err != nil {
+		response.InternalServerError(rw, r, err)
+		return
+	}
+
+	res, err := util.ToJSON(response.Envelope{"users": u})
+	if err != nil {
+		response.InternalServerError(rw, r, err)
+		return
+	}
+
+	s.InfoLog.Printf("User %q returned", username)
+	response.OK(rw, r, res)
+}
+
+func (s *Server) Register(rw http.ResponseWriter, r *http.Request) {
+
+	var input teal.InputUser
 	err := request.Read(rw, r, &input)
 	if err != nil {
 		response.BadRequest(rw, r, err)
+		return
+	}
+
+	v := validator.New()
+	input.Validate(v)
+
+	if !v.Valid() {
+		response.ValidationError(rw, r, v.Errors)
 		return
 	}
 
@@ -39,16 +92,9 @@ func (s *Server) Register(rw http.ResponseWriter, r *http.Request) {
 		Username: input.Username,
 	}
 
-	err = user.HashedPassword.Set(input.Password)
+	err = user.SetPassword(input.Password)
 	if err != nil {
 		response.InternalServerError(rw, r, err)
-		return
-	}
-
-	v := validator.New()
-	user.Validate(v)
-	if !v.Valid() {
-		response.ValidationError(rw, r, v.Errors)
 		return
 	}
 
@@ -65,7 +111,7 @@ func (s *Server) Register(rw http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	body, err := util.ToJSON(response.Envelope{"user": result})
+	body, err := util.ToJSON(response.Envelope{"users": result})
 	if err != nil {
 		s.ErrLog.Println(err)
 		response.InternalServerError(rw, r, err)
@@ -77,29 +123,33 @@ func (s *Server) Register(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) UpdateUser(rw http.ResponseWriter, r *http.Request) {
-	id := HandleId(rw, r)
+	id := HandleInt64("id", rw, r)
 	if id == -1 {
 		return
 	}
 
-	// marshal payload to struct
-	var user teal.User
-	err := request.Read(rw, r, &user)
+	var input teal.InputUser
+	err := request.Read(rw, r, &input)
 	if err != nil {
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	// TODO handle change password
-
 	// validate payload
 	// PUT should require all fields
 	v := validator.New()
-	user.Validate(v)
+	input.Validate(v)
 	if !v.Valid() {
 		response.ValidationError(rw, r, v.Errors)
 		return
 	}
+
+	user := teal.User{
+		Name:     input.Name,
+		Username: input.Username,
+	}
+
+	// TODO handle change password
 
 	result, err := s.Users.Update(id, &user)
 	if err == teal.ErrDoesNotExist {
@@ -124,7 +174,7 @@ func (s *Server) UpdateUser(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) DeleteUser(rw http.ResponseWriter, r *http.Request) {
-	id := HandleId(rw, r)
+	id := HandleInt64("id", rw, r)
 	if id == -1 {
 		return
 	}

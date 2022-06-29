@@ -46,7 +46,7 @@ func TestCreateUser(t *testing.T) {
 	want := &teal.User{
 		Name:           "Bar Baz",
 		Username:       "barbaz",
-		HashedPassword: teal.Password{Hash: []byte("abc123456789")},
+		HashedPassword: []byte("abc123456789"),
 	}
 
 	got, err := ts.Users.Create(want)
@@ -120,7 +120,7 @@ func TestDeleteUserNotExists(t *testing.T) {
 }
 
 func assertUsersEqual(a, b *teal.User) bool {
-	passwordHashEqual := reflect.DeepEqual(a.HashedPassword.Hash, b.HashedPassword.Hash)
+	passwordHashEqual := reflect.DeepEqual(a.HashedPassword, b.HashedPassword)
 
 	return (a.ID == b.ID &&
 		a.Name == b.Name &&

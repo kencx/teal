@@ -271,20 +271,7 @@ func TestAddBookFailValidation(t *testing.T) {
 
 	w, err := testResponse(t, tc)
 	checkErr(t, err)
-
-	// check validation error
-	var body map[string]map[string]string
-	err = json.NewDecoder(w.Body).Decode(&body)
-	checkErr(t, err)
-
-	assertEqual(t, w.Code, http.StatusUnprocessableEntity)
-	got := body["error"]
-
-	val, ok := got["title"]
-	if !ok {
-		t.Errorf("validation error field %q not present", "title")
-	}
-	assertEqual(t, val, "value is missing")
+	assertValidationError(t, w, "title", "value is missing")
 }
 
 func TestUpdateBook(t *testing.T) {
@@ -375,20 +362,7 @@ func TestUpdateBookFailValidation(t *testing.T) {
 
 	w, err := testResponse(t, tc)
 	checkErr(t, err)
-
-	// check validation error
-	var body map[string]map[string]string
-	err = json.NewDecoder(w.Body).Decode(&body)
-	checkErr(t, err)
-
-	assertEqual(t, w.Code, http.StatusUnprocessableEntity)
-	got := body["error"]
-
-	val, ok := got["title"]
-	if !ok {
-		t.Errorf("validation error field %q not present", "title")
-	}
-	assertEqual(t, val, "value is missing")
+	assertValidationError(t, w, "title", "value is missing")
 }
 
 func TestDeleteBook(t *testing.T) {

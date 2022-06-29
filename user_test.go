@@ -15,61 +15,46 @@ var (
 func TestValidateUser(t *testing.T) {
 	tests := []struct {
 		name string
-		user *User
+		user *InputUser
 		err  map[string]string
 	}{{
 		name: "success",
-		user: &User{
+		user: &InputUser{
 			Name:     "John Doe",
 			Username: "johndoe",
-			HashedPassword: Password{
-				Text: &testPassword,
-				Hash: []byte(""),
-			},
+			Password: testPassword,
 		},
 		err: nil,
 	}, {
 		name: "no name",
-		user: &User{
+		user: &InputUser{
 			Name:     "",
 			Username: "johndoe",
-			HashedPassword: Password{
-				Text: &testPassword,
-				Hash: []byte(""),
-			},
+			Password: testPassword,
 		},
 		err: map[string]string{"name": "value is missing"},
 	}, {
 		name: "no username",
-		user: &User{
+		user: &InputUser{
 			Name:     "John Doe",
 			Username: "",
-			HashedPassword: Password{
-				Text: &testPassword,
-				Hash: []byte(""),
-			},
+			Password: testPassword,
 		},
 		err: map[string]string{"username": "value is missing"},
 	}, {
 		name: "no password",
-		user: &User{
+		user: &InputUser{
 			Name:     "John Doe",
 			Username: "johndoe",
-			HashedPassword: Password{
-				Text: &testPasswordEmpty,
-				Hash: []byte(""),
-			},
+			Password: testPasswordEmpty,
 		},
 		err: map[string]string{"password": "value is missing"},
 	}, {
-		name: "password too short",
-		user: &User{
+		name: "no username",
+		user: &InputUser{
 			Name:     "John Doe",
 			Username: "johndoe",
-			HashedPassword: Password{
-				Text: &testPasswordFail,
-				Hash: []byte(""),
-			},
+			Password: testPasswordFail,
 		},
 		err: map[string]string{"password": "must be at least 8 chars long"},
 	}}

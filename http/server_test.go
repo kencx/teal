@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
@@ -52,6 +53,24 @@ func assertObjectEqual(t *testing.T, got, want interface{}) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
+}
+
+func assertValidationError(t *testing.T, w *httptest.ResponseRecorder, key, message string) {
+	t.Helper()
+
+	var env map[string]map[string]string
+	err := json.NewDecoder(w.Body).Decode(&env)
+	checkErr(t, err)
+
+	got := env["error"]
+	assertEqual(t, w.Code, http.StatusUnprocessableEntity)
+	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
+
+	val, ok := got[key]
+	if !ok {
+		t.Errorf("validation error field %q not present", key)
+	}
+	assertEqual(t, val, message)
 }
 
 func checkErr(t *testing.T, err error) {

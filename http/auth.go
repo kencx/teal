@@ -7,7 +7,7 @@ func (s *Server) authenticate(username, password string) (bool, error) {
 		return false, err
 	}
 
-	authenticated, err := user.HashedPassword.Matches(password)
+	authenticated, err := user.PasswordMatches(password)
 	if err != nil {
 		return false, err
 	}
