@@ -8,17 +8,21 @@ import (
 )
 
 type health struct {
-	Version string `json:"version"`
+	Version     string `json:"version"`
+	Environment string `json:"environment"`
 }
 
-func NewHealth(version string) *health {
-	return &health{version}
+func NewHealth(version, env string) *health {
+	return &health{
+		Version:     version,
+		Environment: env,
+	}
 }
 
 func (s *Server) Healthcheck(rw http.ResponseWriter, r *http.Request) {
-	h := NewHealth("v1.0")
+	h := NewHealth("1.0", "dev")
 
-	res, err := util.ToJSON(response.Envelope{"health": h})
+	res, err := util.ToJSON(response.Envelope{"healthcheck": h})
 	if err != nil {
 		response.InternalServerError(rw, r, err)
 	}

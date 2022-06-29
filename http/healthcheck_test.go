@@ -21,8 +21,9 @@ func TestHealthcheck(t *testing.T) {
 	err = json.NewDecoder(w.Body).Decode(&env)
 	checkErr(t, err)
 
-	got := env["health"]
-	assertEqual(t, got.Version, "v1.0")
+	got := env["healthcheck"]
+	assertEqual(t, got.Version, "1.0")
+	assertEqual(t, got.Environment, "dev")
 	assertEqual(t, w.Code, http.StatusOK)
 	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
 }

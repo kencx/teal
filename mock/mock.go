@@ -7,6 +7,7 @@ import (
 type BookStore struct {
 	GetAllBooksFn    func() ([]*teal.Book, error)
 	GetBookFn        func(id int64) (*teal.Book, error)
+	GetBookByISBNFn  func(isbn string) (*teal.Book, error)
 	GetBookByTitleFn func(title string) (*teal.Book, error)
 	CreateBookFn     func(b *teal.Book) (*teal.Book, error)
 	UpdateBookFn     func(id int64, b *teal.Book) (*teal.Book, error)
@@ -24,6 +25,10 @@ type AuthorStore struct {
 
 func (m *BookStore) Get(id int64) (*teal.Book, error) {
 	return m.GetBookFn(id)
+}
+
+func (m *BookStore) GetByISBN(isbn string) (*teal.Book, error) {
+	return m.GetBookByISBNFn(isbn)
 }
 
 func (m *BookStore) GetByTitle(title string) (*teal.Book, error) {

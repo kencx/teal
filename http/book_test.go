@@ -85,6 +85,35 @@ func TestGetBookNil(t *testing.T) {
 	assertEqual(t, got, "the item does not exist")
 }
 
+func TestGetBookByISBN(t *testing.T) {
+	testServer.Books = &mock.BookStore{
+		GetBookByISBNFn: func(isbn string) (*teal.Book, error) {
+			return testBook1, nil
+		},
+	}
+
+	tc := &testCase{
+		method: http.MethodGet,
+		url:    "/api/books/100",
+		data:   nil,
+		params: map[string]string{"isbn": "100"},
+		fn:     testServer.GetBookByISBN,
+	}
+	w, err := testResponse(t, tc)
+	checkErr(t, err)
+
+	var env map[string]*teal.Book
+	err = json.NewDecoder(w.Body).Decode(&env)
+	checkErr(t, err)
+
+	got := env["books"]
+	assertEqual(t, got.Title, testBook1.Title)
+	assertEqual(t, got.Author[0], testBook1.Author[0])
+	assertEqual(t, got.ISBN, testBook1.ISBN)
+	assertEqual(t, w.Code, http.StatusOK)
+	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
+}
+
 func TestGetAllBooks(t *testing.T) {
 	testServer.Books = &mock.BookStore{
 		GetAllBooksFn: func() ([]*teal.Book, error) {
