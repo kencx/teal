@@ -98,8 +98,6 @@ func ValidationError(rw http.ResponseWriter, r *http.Request, err map[string]str
 	res.Write()
 }
 
-// TODO handlePanic
-
 func (r *response) Write() {
 	for k, v := range r.headers {
 		r.rw.Header().Set(k, v)

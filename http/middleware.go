@@ -3,16 +3,20 @@ package http
 import (
 	"errors"
 	"net/http"
+	"runtime/debug"
+	"time"
 
 	"github.com/kencx/teal"
 	tcontext "github.com/kencx/teal/context"
 	"github.com/kencx/teal/http/response"
 )
 
+// TODO do we log if request failed?
 func (s *Server) logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		s.InfoLog.Printf("%s - %s %s %s", r.RemoteAddr, r.Proto, r.Method, r.URL)
+		start := time.Now()
 		next.ServeHTTP(w, r)
+		s.InfoLog.Printf("%s - %s %s %s %s", r.RemoteAddr, r.Proto, r.Method, r.URL, time.Since(start))
 	})
 }
 
@@ -24,6 +28,19 @@ func (s *Server) secureHeaders(next http.Handler) http.Handler {
 		// cookies
 		w.Header().Set("Set-Cookie", "Secure; HttpOnly")
 
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (s *Server) recoverPanic(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				w.Header().Set("Connection", "close")
+				response.InternalServerError(w, r, errors.New("something went wrong. check the server logs for more information"))
+				s.ErrLog.Println(string(debug.Stack()))
+			}
+		}()
 		next.ServeHTTP(w, r)
 	})
 }

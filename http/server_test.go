@@ -43,7 +43,23 @@ func testResponse(t *testing.T, tc *testCase) (*httptest.ResponseRecorder, error
 	return rw, nil
 }
 
-func basicAuthTestResponse(t *testing.T, tc *testCase, s Server, auth string) (*httptest.ResponseRecorder, error) {
+func middlewareTestResponse(t *testing.T, tc *testCase, fn func(next http.Handler) http.Handler) (*httptest.ResponseRecorder, error) {
+	t.Helper()
+
+	req, err := http.NewRequest(tc.method, tc.url, bytes.NewReader(tc.data))
+	if err != nil {
+		return nil, err
+	}
+	rw := httptest.NewRecorder()
+	if tc.params != nil {
+		req = mux.SetURLVars(req, tc.params)
+	}
+
+	fn(http.HandlerFunc(tc.fn)).ServeHTTP(rw, req)
+	return rw, nil
+}
+
+func basicAuthTestResponse(t *testing.T, tc *testCase, auth string) (*httptest.ResponseRecorder, error) {
 	t.Helper()
 
 	req, err := http.NewRequest(tc.method, tc.url, bytes.NewReader(tc.data))
@@ -57,7 +73,7 @@ func basicAuthTestResponse(t *testing.T, tc *testCase, s Server, auth string) (*
 		req = mux.SetURLVars(req, tc.params)
 	}
 
-	s.basicAuth(http.HandlerFunc(tc.fn)).ServeHTTP(rw, req)
+	testServer.basicAuth(http.HandlerFunc(tc.fn)).ServeHTTP(rw, req)
 	return rw, nil
 }
 

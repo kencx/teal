@@ -3,7 +3,6 @@ package http
 import (
 	"encoding/base64"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/kencx/teal"
@@ -26,10 +25,35 @@ func TestSecureHeaders(t *testing.T) {
 		assertObjectEqual(t, got, want)
 	}
 
-	r, err := http.NewRequest(http.MethodGet, "/api/", nil)
+	tc := &testCase{
+		url:    "/api/",
+		method: http.MethodGet,
+		data:   nil,
+		params: nil,
+		fn:     next,
+	}
+	_, err := middlewareTestResponse(t, tc, testServer.secureHeaders)
 	checkErr(t, err)
-	rw := httptest.NewRecorder()
-	testServer.secureHeaders(http.HandlerFunc(next)).ServeHTTP(rw, r)
+}
+
+func TestRecoverPanic(t *testing.T) {
+	next := func(rw http.ResponseWriter, r *http.Request) {
+		panic("test panic")
+	}
+
+	tc := &testCase{
+		url:    "/api/",
+		method: http.MethodGet,
+		data:   nil,
+		params: nil,
+		fn:     next,
+	}
+	rw, err := middlewareTestResponse(t, tc, testServer.recoverPanic)
+	checkErr(t, err)
+
+	got := rw.Header().Get("Connection")
+	assertEqual(t, got, "close")
+	assertResponseError(t, rw, http.StatusInternalServerError, "something went wrong. check the server logs for more information")
 }
 
 func TestBasicAuth(t *testing.T) {
@@ -65,7 +89,7 @@ func TestBasicAuth(t *testing.T) {
 			fn:     next,
 		}
 
-		rw, err := basicAuthTestResponse(t, tc, testServer, auth)
+		rw, err := basicAuthTestResponse(t, tc, auth)
 		checkErr(t, err)
 		assertEqual(t, rw.Code, http.StatusOK)
 	})
@@ -78,7 +102,7 @@ func TestBasicAuth(t *testing.T) {
 			params: nil,
 			fn:     next,
 		}
-		rw, err := basicAuthTestResponse(t, tc, testServer, "")
+		rw, err := basicAuthTestResponse(t, tc, "")
 		checkErr(t, err)
 		assertResponseError(t, rw, http.StatusUnauthorized, "no authentication headers")
 	})
@@ -97,7 +121,7 @@ func TestBasicAuth(t *testing.T) {
 			params: nil,
 			fn:     next,
 		}
-		rw, err := basicAuthTestResponse(t, tc, testServer, auth)
+		rw, err := basicAuthTestResponse(t, tc, auth)
 		checkErr(t, err)
 		assertResponseError(t, rw, http.StatusUnauthorized, "invalid credentials")
 	})
@@ -112,7 +136,7 @@ func TestBasicAuth(t *testing.T) {
 		}
 
 		auth := base64.StdEncoding.EncodeToString([]byte(testUser1.Username + ":wrongPassword"))
-		rw, err := basicAuthTestResponse(t, tc, testServer, auth)
+		rw, err := basicAuthTestResponse(t, tc, auth)
 		checkErr(t, err)
 		assertResponseError(t, rw, http.StatusUnauthorized, "invalid credentials")
 	})

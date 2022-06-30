@@ -65,22 +65,24 @@ func (s *Server) Close() error {
 
 func (s *Server) RegisterRoutes() {
 
-	s.Router.HandleFunc("/health", s.Healthcheck).Methods(http.MethodGet)
-	api := s.Router.PathPrefix("/api").Subrouter()
+	router := s.Router
+	router.Use(s.recoverPanic)
+	router.Use(s.logging)
+	// router.Use(s.handleCORS)
+	router.Use(s.secureHeaders)
+	router.HandleFunc("/health", s.Healthcheck).Methods(http.MethodGet)
+	router.HandleFunc("/api/users/", s.Register).Methods(http.MethodPost)
+	// r.HandleFunc("/api/tokens/", s.NewToken).Methods(http.MethodPost)
 
-	// middlewares
-	api.Use(s.logging)
-	// api.Use(s.handleCORS)
-	api.Use(s.secureHeaders)
+	api := router.PathPrefix("/api").Subrouter()
 	// api.Use(s.apiKeyAuth)
-	// api.Use(s.basicAuth)
+	api.Use(s.basicAuth)
 
-	ur := api.PathPrefix("/users").Subrouter()
+	ur := api.PathPrefix("/users/").Subrouter()
 	ur.HandleFunc("/{id:[0-9]+}/", s.GetUser).Methods(http.MethodGet)
 	ur.HandleFunc("/{username}/", s.GetUserByUsername).Methods(http.MethodGet)
-	ur.HandleFunc("/register/", s.Register).Methods(http.MethodPost)
 
-	br := api.PathPrefix("/books").Subrouter()
+	br := api.PathPrefix("/books/").Subrouter()
 	br.HandleFunc("/{id:[0-9]+}/", s.GetBook).Methods(http.MethodGet)
 	br.HandleFunc("/{isbn}/", s.GetBookByISBN).Methods(http.MethodGet)
 	br.HandleFunc("/", s.GetAllBooks).Methods(http.MethodGet)
@@ -88,8 +90,9 @@ func (s *Server) RegisterRoutes() {
 	br.HandleFunc("/{id:[0-9]+}/", s.UpdateBook).Methods(http.MethodPut)
 	br.HandleFunc("/{id:[0-9]+}/", s.DeleteBook).Methods(http.MethodDelete)
 
-	ar := api.PathPrefix("/authors").Subrouter()
+	ar := api.PathPrefix("/authors/").Subrouter()
 	ar.HandleFunc("/{id:[0-9]+}/", s.GetAuthor).Methods(http.MethodGet)
+	ar.HandleFunc("/{name}/", s.GetAuthorByName).Methods(http.MethodGet)
 	ar.HandleFunc("/", s.GetAllAuthors).Methods(http.MethodGet)
 	ar.HandleFunc("/", s.AddAuthor).Methods(http.MethodPost)
 	ar.HandleFunc("/{id:[0-9]+}/", s.UpdateAuthor).Methods(http.MethodPut)
