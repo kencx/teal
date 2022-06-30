@@ -1,15 +1,17 @@
 package teal
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/kencx/teal/validator"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
-	testPassword      = "abcd1234"
-	testPasswordFail  = "abc"
-	testPasswordEmpty = ""
+	testPw      = "abcd1234"
+	testPwShort = "abc"
+	testPwEmpty = ""
 )
 
 func TestValidateUser(t *testing.T) {
@@ -22,7 +24,7 @@ func TestValidateUser(t *testing.T) {
 		user: &InputUser{
 			Name:     "John Doe",
 			Username: "johndoe",
-			Password: testPassword,
+			Password: testPw,
 		},
 		err: nil,
 	}, {
@@ -30,7 +32,7 @@ func TestValidateUser(t *testing.T) {
 		user: &InputUser{
 			Name:     "",
 			Username: "johndoe",
-			Password: testPassword,
+			Password: testPw,
 		},
 		err: map[string]string{"name": "value is missing"},
 	}, {
@@ -38,7 +40,7 @@ func TestValidateUser(t *testing.T) {
 		user: &InputUser{
 			Name:     "John Doe",
 			Username: "",
-			Password: testPassword,
+			Password: testPw,
 		},
 		err: map[string]string{"username": "value is missing"},
 	}, {
@@ -46,7 +48,7 @@ func TestValidateUser(t *testing.T) {
 		user: &InputUser{
 			Name:     "John Doe",
 			Username: "johndoe",
-			Password: testPasswordEmpty,
+			Password: testPwEmpty,
 		},
 		err: map[string]string{"password": "value is missing"},
 	}, {
@@ -54,7 +56,7 @@ func TestValidateUser(t *testing.T) {
 		user: &InputUser{
 			Name:     "John Doe",
 			Username: "johndoe",
-			Password: testPasswordFail,
+			Password: testPwShort,
 		},
 		err: map[string]string{"password": "must be at least 8 chars long"},
 	}}
@@ -90,4 +92,70 @@ func TestValidateUser(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSetPassword(t *testing.T) {
+	u := &User{
+		Name:     "John Doe",
+		Username: "johndoe",
+	}
+
+	err := u.SetPassword(testPw)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	err = bcrypt.CompareHashAndPassword(u.HashedPassword, []byte(testPw))
+	if err != nil {
+		switch {
+		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
+			t.Errorf("hashed password does not match")
+		default:
+			t.Fatalf("unexpected err: %v", err)
+		}
+	}
+}
+
+func TestPasswordMatches(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		u := &User{
+			Name:     "John Doe",
+			Username: "johndoe",
+		}
+
+		hash, err := bcrypt.GenerateFromPassword([]byte(testPw), 12)
+		if err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+		u.HashedPassword = hash
+
+		matches, err := u.PasswordMatches(testPw)
+		if err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+
+		if !matches {
+			t.Errorf("got %v, want %v", matches, true)
+		}
+	})
+
+	t.Run("fail", func(t *testing.T) {
+		u := &User{
+			Name:     "John Doe",
+			Username: "johndoe",
+		}
+
+		hash, err := bcrypt.GenerateFromPassword([]byte(testPw), 12)
+		if err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+		u.HashedPassword = hash
+
+		matches, err := u.PasswordMatches("wrongPassword")
+		if err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+		if matches {
+			t.Errorf("got %v, want %v", matches, false)
+		}
+	})
 }
