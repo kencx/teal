@@ -75,14 +75,7 @@ func TestGetBookNil(t *testing.T) {
 
 	w, err := testResponse(t, tc)
 	checkErr(t, err)
-
-	var env map[string]string
-	err = json.NewDecoder(w.Body).Decode(&env)
-	checkErr(t, err)
-
-	got := env["error"]
-	assertEqual(t, w.Code, http.StatusNotFound)
-	assertEqual(t, got, "the item does not exist")
+	assertResponseError(t, w, http.StatusNotFound, "the item does not exist")
 }
 
 func TestGetBookByISBN(t *testing.T) {
@@ -327,14 +320,7 @@ func TestUpdateBookNil(t *testing.T) {
 
 	w, err := testResponse(t, tc)
 	checkErr(t, err)
-
-	var env map[string]string
-	err = json.NewDecoder(w.Body).Decode(&env)
-	checkErr(t, err)
-
-	got := env["error"]
-	assertEqual(t, w.Code, http.StatusNotFound)
-	assertEqual(t, got, "the item does not exist")
+	assertResponseError(t, w, http.StatusNotFound, "the item does not exist")
 }
 
 func TestUpdateBookFailValidation(t *testing.T) {
@@ -405,12 +391,5 @@ func TestDeleteBookNil(t *testing.T) {
 
 	w, err := testResponse(t, tc)
 	checkErr(t, err)
-
-	var env map[string]string
-	err = json.NewDecoder(w.Body).Decode(&env)
-	checkErr(t, err)
-
-	got := env["error"]
-	assertEqual(t, w.Code, http.StatusNotFound)
-	assertEqual(t, got, "the item does not exist")
+	assertResponseError(t, w, http.StatusNotFound, "the item does not exist")
 }

@@ -55,6 +55,17 @@ func assertObjectEqual(t *testing.T, got, want interface{}) {
 	}
 }
 
+func assertResponseError(t *testing.T, w *httptest.ResponseRecorder, status int, message string) {
+	var env map[string]string
+	err := json.NewDecoder(w.Body).Decode(&env)
+	checkErr(t, err)
+
+	got := env["error"]
+	assertEqual(t, w.Code, status)
+	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
+	assertEqual(t, got, message)
+}
+
 func assertValidationError(t *testing.T, w *httptest.ResponseRecorder, key, message string) {
 	t.Helper()
 
