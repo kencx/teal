@@ -19,11 +19,12 @@ var testServer = Server{
 }
 
 type testCase struct {
-	url    string
-	method string
-	data   []byte
-	params map[string]string
-	fn     func(http.ResponseWriter, *http.Request)
+	url     string
+	method  string
+	headers map[string]string
+	data    []byte
+	params  map[string]string
+	fn      func(http.ResponseWriter, *http.Request)
 }
 
 func testResponse(t *testing.T, tc *testCase) (*httptest.ResponseRecorder, error) {
@@ -50,6 +51,12 @@ func middlewareTestResponse(t *testing.T, tc *testCase, fn func(next http.Handle
 	if err != nil {
 		return nil, err
 	}
+	if tc.headers != nil {
+		for k, v := range tc.headers {
+			req.Header.Add(k, v)
+		}
+	}
+
 	rw := httptest.NewRecorder()
 	if tc.params != nil {
 		req = mux.SetURLVars(req, tc.params)
@@ -60,20 +67,9 @@ func middlewareTestResponse(t *testing.T, tc *testCase, fn func(next http.Handle
 }
 
 func basicAuthTestResponse(t *testing.T, tc *testCase, auth string) (*httptest.ResponseRecorder, error) {
-	t.Helper()
-
-	req, err := http.NewRequest(tc.method, tc.url, bytes.NewReader(tc.data))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("Authorization", "Basic "+auth)
-
-	rw := httptest.NewRecorder()
-	if tc.params != nil {
-		req = mux.SetURLVars(req, tc.params)
-	}
-
-	testServer.basicAuth(http.HandlerFunc(tc.fn)).ServeHTTP(rw, req)
+	tc.headers = map[string]string{"Authorization": "Basic " + auth}
+	rw, err := middlewareTestResponse(t, tc, testServer.basicAuth)
+	checkErr(t, err)
 	return rw, nil
 }
 

@@ -10,8 +10,6 @@ func TestHealthcheck(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodGet,
 		url:    "/health",
-		data:   nil,
-		params: nil,
 		fn:     testServer.Healthcheck,
 	}
 	w, err := testResponse(t, tc)

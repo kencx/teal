@@ -30,7 +30,6 @@ func TestGetAuthor(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodGet,
 		url:    "/api/authors/1",
-		data:   nil,
 		params: map[string]string{"id": "1"},
 		fn:     testServer.GetAuthor,
 	}
@@ -57,7 +56,6 @@ func TestGetAuthorByName(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodGet,
 		url:    "/api/authors/Author+1",
-		data:   nil,
 		params: map[string]string{"name": "Author 1"},
 		fn:     testServer.GetAuthorByName,
 	}
@@ -85,8 +83,6 @@ func TestGetAllAuthors(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodGet,
 		url:    "/api/authors/",
-		data:   nil,
-		params: nil,
 		fn:     testServer.GetAllAuthors,
 	}
 	w, err := testResponse(t, tc)
@@ -115,8 +111,6 @@ func TestGetAllAuthorsNil(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodGet,
 		url:    "/api/authors/",
-		data:   nil,
-		params: nil,
 		fn:     testServer.GetAllAuthors,
 	}
 	w, err := testResponse(t, tc)
@@ -140,7 +134,6 @@ func TestAddAuthor(t *testing.T) {
 		method: http.MethodPost,
 		url:    "/api/authors/",
 		data:   want,
-		params: nil,
 		fn:     testServer.AddAuthor,
 	}
 	w, err := testResponse(t, tc)
@@ -171,7 +164,6 @@ func TestAddAuthorFailValidation(t *testing.T) {
 		method: http.MethodPost,
 		url:    "/api/authors/",
 		data:   want,
-		params: nil,
 		fn:     testServer.AddAuthor,
 	}
 	w, err := testResponse(t, tc)
@@ -220,7 +212,6 @@ func TestDeleteAuthor(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodDelete,
 		url:    "/api/authors/1",
-		data:   nil,
 		params: map[string]string{"id": "1"},
 		fn:     testServer.DeleteAuthor,
 	}

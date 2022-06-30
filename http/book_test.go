@@ -39,7 +39,6 @@ func TestGetBook(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodGet,
 		url:    "/api/books/1",
-		data:   nil,
 		params: map[string]string{"id": "1"},
 		fn:     testServer.GetBook,
 	}
@@ -68,7 +67,6 @@ func TestGetBookNil(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodGet,
 		url:    "/api/books/1",
-		data:   nil,
 		params: map[string]string{"id": "1"},
 		fn:     testServer.GetBook,
 	}
@@ -88,7 +86,6 @@ func TestGetBookByISBN(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodGet,
 		url:    "/api/books/100",
-		data:   nil,
 		params: map[string]string{"isbn": "100"},
 		fn:     testServer.GetBookByISBN,
 	}
@@ -117,8 +114,6 @@ func TestGetAllBooks(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodGet,
 		url:    "/api/books/",
-		data:   nil,
-		params: nil,
 		fn:     testServer.GetAllBooks,
 	}
 
@@ -149,8 +144,6 @@ func TestGetAllBooksNil(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodGet,
 		url:    "/api/books/",
-		data:   nil,
-		params: nil,
 		fn:     testServer.GetAllBooks,
 	}
 
@@ -169,7 +162,6 @@ func TestQueryBooksFromAuthor(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodGet,
 		url:    "/api/books/?author=John+Doe",
-		data:   nil,
 		params: map[string]string{"author": "John Doe"},
 		fn:     testServer.GetAllBooks,
 	}
@@ -196,7 +188,6 @@ func TestNilQueryBooksFromAuthor(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodGet,
 		url:    "/api/books/?author=John+Doe",
-		data:   nil,
 		params: map[string]string{"author": "John Doe"},
 		fn:     testServer.GetAllBooks,
 	}
@@ -220,7 +211,6 @@ func TestAddBook(t *testing.T) {
 		method: http.MethodPost,
 		url:    "/api/books",
 		data:   want,
-		params: nil,
 		fn:     testServer.AddBook,
 	}
 
@@ -258,7 +248,6 @@ func TestAddBookFailValidation(t *testing.T) {
 		method: http.MethodPost,
 		url:    "/api/books",
 		data:   want,
-		params: nil,
 		fn:     testServer.AddBook,
 	}
 
@@ -362,7 +351,6 @@ func TestDeleteBook(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodDelete,
 		url:    "/api/books/1",
-		data:   nil,
 		params: map[string]string{"id": "1"},
 		fn:     testServer.DeleteBook,
 	}
@@ -384,7 +372,6 @@ func TestDeleteBookNil(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodDelete,
 		url:    "/api/books/10",
-		data:   nil,
 		params: map[string]string{"id": "10"},
 		fn:     testServer.DeleteBook,
 	}

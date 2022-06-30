@@ -28,8 +28,6 @@ func TestSecureHeaders(t *testing.T) {
 	tc := &testCase{
 		url:    "/api/",
 		method: http.MethodGet,
-		data:   nil,
-		params: nil,
 		fn:     next,
 	}
 	_, err := middlewareTestResponse(t, tc, testServer.secureHeaders)
@@ -44,8 +42,6 @@ func TestRecoverPanic(t *testing.T) {
 	tc := &testCase{
 		url:    "/api/",
 		method: http.MethodGet,
-		data:   nil,
-		params: nil,
 		fn:     next,
 	}
 	rw, err := middlewareTestResponse(t, tc, testServer.recoverPanic)
@@ -84,8 +80,6 @@ func TestBasicAuth(t *testing.T) {
 		tc := &testCase{
 			url:    "/api/books/",
 			method: http.MethodGet,
-			data:   nil,
-			params: nil,
 			fn:     next,
 		}
 
@@ -98,8 +92,6 @@ func TestBasicAuth(t *testing.T) {
 		tc := &testCase{
 			url:    "/api/books/",
 			method: http.MethodGet,
-			data:   nil,
-			params: nil,
 			fn:     next,
 		}
 		rw, err := basicAuthTestResponse(t, tc, "")
@@ -117,8 +109,6 @@ func TestBasicAuth(t *testing.T) {
 		tc := &testCase{
 			url:    "/api/books/",
 			method: http.MethodGet,
-			data:   nil,
-			params: nil,
 			fn:     next,
 		}
 		rw, err := basicAuthTestResponse(t, tc, auth)
@@ -130,8 +120,6 @@ func TestBasicAuth(t *testing.T) {
 		tc := &testCase{
 			url:    "/api/books/",
 			method: http.MethodGet,
-			data:   nil,
-			params: nil,
 			fn:     next,
 		}
 

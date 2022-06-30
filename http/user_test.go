@@ -40,7 +40,6 @@ func TestGetUser(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodGet,
 		url:    "/api/users/1",
-		data:   nil,
 		params: map[string]string{"id": "1"},
 		fn:     testServer.GetUser,
 	}
@@ -69,7 +68,6 @@ func TestGetUserByUsername(t *testing.T) {
 	tc := &testCase{
 		method: http.MethodGet,
 		url:    "/api/users/johndoe",
-		data:   nil,
 		params: map[string]string{"username": "johndoe"},
 		fn:     testServer.GetUserByUsername,
 	}
@@ -102,7 +100,6 @@ func TestUserRegister(t *testing.T) {
 		method: http.MethodPost,
 		url:    "/api/users/register/",
 		data:   want,
-		params: nil,
 		fn:     testServer.Register,
 	}
 	w, err := testResponse(t, tc)
@@ -134,7 +131,6 @@ func TestUserRegisterPasswordFail(t *testing.T) {
 		method: http.MethodPost,
 		url:    "/api/users/register/",
 		data:   want,
-		params: nil,
 		fn:     testServer.Register,
 	}
 	w, err := testResponse(t, tc)
@@ -156,7 +152,6 @@ func TestUserRegisterDuplicateUsername(t *testing.T) {
 		method: http.MethodPost,
 		url:    "/api/users/register/",
 		data:   want,
-		params: nil,
 		fn:     testServer.Register,
 	}
 	w, err := testResponse(t, tc)
