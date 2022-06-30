@@ -43,6 +43,24 @@ func testResponse(t *testing.T, tc *testCase) (*httptest.ResponseRecorder, error
 	return rw, nil
 }
 
+func basicAuthTestResponse(t *testing.T, tc *testCase, s Server, auth string) (*httptest.ResponseRecorder, error) {
+	t.Helper()
+
+	req, err := http.NewRequest(tc.method, tc.url, bytes.NewReader(tc.data))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", "Basic "+auth)
+
+	rw := httptest.NewRecorder()
+	if tc.params != nil {
+		req = mux.SetURLVars(req, tc.params)
+	}
+
+	s.basicAuth(http.HandlerFunc(tc.fn)).ServeHTTP(rw, req)
+	return rw, nil
+}
+
 func assertEqual[T comparable](t *testing.T, got, want T) {
 	if got != want {
 		t.Errorf("got %v, want %v", got, want)

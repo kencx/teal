@@ -1,9 +1,11 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/kencx/teal"
+	tcontext "github.com/kencx/teal/context"
 	"github.com/kencx/teal/http/response"
 )
 
@@ -37,21 +39,31 @@ func (s *Server) basicAuth(next http.Handler) http.Handler {
 
 		username, pass, ok := r.BasicAuth()
 		if !ok {
+			s.InfoLog.Printf("auth: no authentication headers")
 			response.Unauthorized(rw, r, teal.ErrNoAuthHeader)
 			return
 		}
 
-		authenticated, err := s.authenticate(username, pass)
+		authenticated, user, err := s.authenticate(username, pass)
 		if err != nil {
-			response.InternalServerError(rw, r, err)
-			return
+			switch {
+			case errors.Is(err, teal.ErrDoesNotExist):
+				s.InfoLog.Printf("auth: user %s does not exist", username)
+				response.Unauthorized(rw, r, teal.ErrInvalidCreds)
+				return
+			default:
+				response.InternalServerError(rw, r, err)
+				return
+			}
 		}
 		if !authenticated {
+			s.InfoLog.Printf("auth: user %s authentication failed", username)
 			response.Unauthorized(rw, r, teal.ErrInvalidCreds)
 			return
 		}
 
-		// TODO save user to context
+		r = r.WithContext(tcontext.WithUser(r.Context(), user))
+		s.InfoLog.Printf("auth: %s authenticated", username)
 		next.ServeHTTP(rw, r)
 	})
 }

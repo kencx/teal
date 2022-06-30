@@ -1,18 +1,25 @@
 package http
 
-func (s *Server) authenticate(username, password string) (bool, error) {
+import (
+	"github.com/kencx/teal"
+)
+
+func (s *Server) authenticate(username, password string) (bool, *teal.User, error) {
+	if username == "" || password == "" {
+		return false, nil, nil
+	}
 
 	user, err := s.Users.GetByUsername(username)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
+	// user should never be nil
 	authenticated, err := user.PasswordMatches(password)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
-
-	return authenticated, nil
+	return authenticated, user, nil
 }
 
 // func (s *Server) apiKeyValidation(key string) (bool, error) {

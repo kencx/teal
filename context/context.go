@@ -12,6 +12,7 @@ type baseKey string
 const (
 	bookKey     = baseKey("book")
 	authorIdKey = baseKey("author")
+	userIdKey   = baseKey("userId")
 	userKey     = baseKey("user")
 )
 
@@ -40,13 +41,25 @@ func GetAuthorID(ctx context.Context) (int64, error) {
 }
 
 func WithUserID(ctx context.Context, value int64) context.Context {
-	return context.WithValue(ctx, userKey, value)
+	return context.WithValue(ctx, userIdKey, value)
 }
 
 func GetUserID(ctx context.Context) (int64, error) {
-	value, ok := ctx.Value(userKey).(int64)
+	value, ok := ctx.Value(userIdKey).(int64)
 	if !ok {
 		return -1, fmt.Errorf("ctx: failed to get User from context")
+	}
+	return value, nil
+}
+
+func WithUser(ctx context.Context, value *teal.User) context.Context {
+	return context.WithValue(ctx, userKey, value)
+}
+
+func GetUser(ctx context.Context) (*teal.User, error) {
+	value, ok := ctx.Value(userKey).(*teal.User)
+	if !ok {
+		return nil, fmt.Errorf("ctx: failed to get User from context")
 	}
 	return value, nil
 }
