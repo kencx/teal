@@ -16,11 +16,12 @@ type BookStore struct {
 }
 
 type AuthorStore struct {
-	GetAuthorFn     func(id int64) (*teal.Author, error)
-	GetAllAuthorsFn func() ([]*teal.Author, error)
-	CreateAuthorFn  func(a *teal.Author) (*teal.Author, error)
-	UpdateAuthorFn  func(id int64, a *teal.Author) (*teal.Author, error)
-	DeleteAuthorFn  func(id int64) error
+	GetAuthorFn       func(id int64) (*teal.Author, error)
+	GetAuthorByNameFn func(name string) (*teal.Author, error)
+	GetAllAuthorsFn   func() ([]*teal.Author, error)
+	CreateAuthorFn    func(a *teal.Author) (*teal.Author, error)
+	UpdateAuthorFn    func(id int64, a *teal.Author) (*teal.Author, error)
+	DeleteAuthorFn    func(id int64) error
 }
 
 type UserStore struct {
@@ -32,76 +33,80 @@ type UserStore struct {
 	DeleteUserFn        func(id int64) error
 }
 
-func (m *BookStore) Get(id int64) (*teal.Book, error) {
-	return m.GetBookFn(id)
+func (s *BookStore) Get(id int64) (*teal.Book, error) {
+	return s.GetBookFn(id)
 }
 
-func (m *BookStore) GetByISBN(isbn string) (*teal.Book, error) {
-	return m.GetBookByISBNFn(isbn)
+func (s *BookStore) GetByISBN(isbn string) (*teal.Book, error) {
+	return s.GetBookByISBNFn(isbn)
 }
 
-func (m *BookStore) GetByTitle(title string) (*teal.Book, error) {
-	return m.GetBookByTitleFn(title)
+func (s *BookStore) GetByTitle(title string) (*teal.Book, error) {
+	return s.GetBookByTitleFn(title)
 }
 
-func (m *BookStore) GetAll() ([]*teal.Book, error) {
-	return m.GetAllBooksFn()
+func (s *BookStore) GetAll() ([]*teal.Book, error) {
+	return s.GetAllBooksFn()
 }
 
-func (m *BookStore) Create(b *teal.Book) (*teal.Book, error) {
-	return m.CreateBookFn(b)
+func (s *BookStore) Create(b *teal.Book) (*teal.Book, error) {
+	return s.CreateBookFn(b)
 }
 
-func (m *BookStore) Update(id int64, b *teal.Book) (*teal.Book, error) {
-	return m.UpdateBookFn(id, b)
+func (s *BookStore) Update(id int64, b *teal.Book) (*teal.Book, error) {
+	return s.UpdateBookFn(id, b)
 }
 
-func (m *BookStore) Delete(id int64) error {
-	return m.DeleteBookFn(id)
+func (s *BookStore) Delete(id int64) error {
+	return s.DeleteBookFn(id)
 }
 
-func (m *BookStore) GetByAuthor(name string) ([]*teal.Book, error) {
-	return m.GetByAuthorFn(name)
+func (s *BookStore) GetByAuthor(name string) ([]*teal.Book, error) {
+	return s.GetByAuthorFn(name)
 }
 
-func (m *AuthorStore) Get(id int64) (*teal.Author, error) {
-	return m.GetAuthorFn(id)
+func (s *AuthorStore) Get(id int64) (*teal.Author, error) {
+	return s.GetAuthorFn(id)
 }
 
-func (m *AuthorStore) GetAll() ([]*teal.Author, error) {
-	return m.GetAllAuthorsFn()
+func (s *AuthorStore) GetByName(name string) (*teal.Author, error) {
+	return s.GetAuthorByNameFn(name)
 }
 
-func (m *AuthorStore) Create(a *teal.Author) (*teal.Author, error) {
-	return m.CreateAuthorFn(a)
+func (s *AuthorStore) GetAll() ([]*teal.Author, error) {
+	return s.GetAllAuthorsFn()
 }
 
-func (m *AuthorStore) Update(id int64, a *teal.Author) (*teal.Author, error) {
-	return m.UpdateAuthorFn(id, a)
+func (s *AuthorStore) Create(a *teal.Author) (*teal.Author, error) {
+	return s.CreateAuthorFn(a)
 }
 
-func (m *AuthorStore) Delete(id int64) error {
-	return m.DeleteAuthorFn(id)
+func (s *AuthorStore) Update(id int64, a *teal.Author) (*teal.Author, error) {
+	return s.UpdateAuthorFn(id, a)
 }
 
-func (m *UserStore) Get(id int64) (*teal.User, error) {
-	return m.GetUserFn(id)
+func (s *AuthorStore) Delete(id int64) error {
+	return s.DeleteAuthorFn(id)
 }
 
-func (m *UserStore) GetByUsername(username string) (*teal.User, error) {
-	return m.GetUserByUsernameFn(username)
+func (s *UserStore) Get(id int64) (*teal.User, error) {
+	return s.GetUserFn(id)
 }
 
-func (m *UserStore) Create(a *teal.User) (*teal.User, error) {
-	return m.CreateUserFn(a)
+func (s *UserStore) GetByUsername(username string) (*teal.User, error) {
+	return s.GetUserByUsernameFn(username)
+}
+
+func (s *UserStore) Create(a *teal.User) (*teal.User, error) {
+	return s.CreateUserFn(a)
 
 }
 
-func (m *UserStore) Update(id int64, a *teal.User) (*teal.User, error) {
-	return m.UpdateUserFn(id, a)
+func (s *UserStore) Update(id int64, a *teal.User) (*teal.User, error) {
+	return s.UpdateUserFn(id, a)
 
 }
 
-func (m *UserStore) Delete(id int64) error {
-	return m.DeleteUserFn(id)
+func (s *UserStore) Delete(id int64) error {
+	return s.DeleteUserFn(id)
 }

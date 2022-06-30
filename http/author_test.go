@@ -47,6 +47,33 @@ func TestGetAuthor(t *testing.T) {
 	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
 }
 
+func TestGetAuthorByName(t *testing.T) {
+	testServer.Authors = &mock.AuthorStore{
+		GetAuthorByNameFn: func(name string) (*teal.Author, error) {
+			return testAuthor1, nil
+		},
+	}
+
+	tc := &testCase{
+		method: http.MethodGet,
+		url:    "/api/authors/Author+1",
+		data:   nil,
+		params: map[string]string{"name": "Author 1"},
+		fn:     testServer.GetAuthorByName,
+	}
+	w, err := testResponse(t, tc)
+	checkErr(t, err)
+
+	var env map[string]*teal.Author
+	err = json.NewDecoder(w.Body).Decode(&env)
+	checkErr(t, err)
+
+	got := env["authors"]
+	assertEqual(t, got.Name, testAuthor1.Name)
+	assertEqual(t, w.Code, http.StatusOK)
+	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
+}
+
 func TestGetAllAuthors(t *testing.T) {
 
 	testServer.Authors = &mock.AuthorStore{

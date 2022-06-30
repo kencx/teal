@@ -12,6 +12,7 @@ import (
 
 type AuthorStore interface {
 	Get(id int64) (*teal.Author, error)
+	GetByName(name string) (*teal.Author, error)
 	GetAll() ([]*teal.Author, error)
 	Create(b *teal.Author) (*teal.Author, error)
 	Update(id int64, b *teal.Author) (*teal.Author, error)
@@ -42,6 +43,30 @@ func (s *Server) GetAuthor(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	s.InfoLog.Printf("Author %d returned", id)
+	response.OK(rw, r, res)
+}
+
+func (s *Server) GetAuthorByName(rw http.ResponseWriter, r *http.Request) {
+	name := HandleString("name", r)
+
+	a, err := s.Authors.GetByName(name)
+	if err == teal.ErrDoesNotExist {
+		s.InfoLog.Printf("Author %q not found", name)
+		response.NotFound(rw, r, err)
+		return
+
+	} else if err != nil {
+		response.InternalServerError(rw, r, err)
+		return
+	}
+
+	res, err := util.ToJSON(response.Envelope{"authors": a})
+	if err != nil {
+		response.InternalServerError(rw, r, err)
+		return
+	}
+
+	s.InfoLog.Printf("Author %q returned", name)
 	response.OK(rw, r, res)
 }
 
