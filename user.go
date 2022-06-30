@@ -3,6 +3,7 @@ package teal
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/kencx/teal/validator"
@@ -25,6 +26,10 @@ type InputUser struct {
 	Username string
 	Password string
 	Role     string
+}
+
+func (u User) String() string {
+	return fmt.Sprintf(`User %s, username=%s, role=%s`, u.Name, u.Username, u.Role)
 }
 
 func (u *User) SetPassword(text string) error {

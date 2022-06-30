@@ -59,6 +59,35 @@ func TestGetUser(t *testing.T) {
 	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
 }
 
+func TestGetUserByUsername(t *testing.T) {
+	testServer.Users = &mock.UserStore{
+		GetUserByUsernameFn: func(username string) (*teal.User, error) {
+			return testUser1, nil
+		},
+	}
+
+	tc := &testCase{
+		method: http.MethodGet,
+		url:    "/api/users/johndoe",
+		data:   nil,
+		params: map[string]string{"username": "johndoe"},
+		fn:     testServer.GetUserByUsername,
+	}
+	w, err := testResponse(t, tc)
+	checkErr(t, err)
+
+	var env map[string]*teal.User
+	err = json.NewDecoder(w.Body).Decode(&env)
+	checkErr(t, err)
+
+	got := env["users"]
+	assertEqual(t, got.Name, testUser1.Name)
+	assertEqual(t, got.Username, testUser1.Username)
+	assertEqual(t, got.Role, testUser1.Role)
+	assertEqual(t, w.Code, http.StatusOK)
+	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
+}
+
 func TestUserRegister(t *testing.T) {
 	want, err := util.ToJSON(inputTestUser1)
 	checkErr(t, err)

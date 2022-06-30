@@ -41,7 +41,12 @@ func TestBasicAuth(t *testing.T) {
 	}
 
 	auth := base64.StdEncoding.EncodeToString([]byte(testUser1.Username + ":" + inputTestUser1.Password))
-	next := func(rw http.ResponseWriter, r *http.Request) {}
+	next := func(rw http.ResponseWriter, r *http.Request) {
+		_, err := tcontext.GetUser(r.Context())
+		if err == nil {
+			t.Errorf("expected err: unable to get user from context")
+		}
+	}
 
 	t.Run("success", func(t *testing.T) {
 		next := func(rw http.ResponseWriter, r *http.Request) {

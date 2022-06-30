@@ -104,6 +104,28 @@ func TestGetAllAuthors(t *testing.T) {
 	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
 }
 
+func TestGetAllAuthorsNil(t *testing.T) {
+
+	testServer.Authors = &mock.AuthorStore{
+		GetAllAuthorsFn: func() ([]*teal.Author, error) {
+			return nil, teal.ErrNoRows
+		},
+	}
+
+	tc := &testCase{
+		method: http.MethodGet,
+		url:    "/api/authors/",
+		data:   nil,
+		params: nil,
+		fn:     testServer.GetAllAuthors,
+	}
+	w, err := testResponse(t, tc)
+	checkErr(t, err)
+
+	assertEqual(t, w.Code, http.StatusNoContent)
+	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
+}
+
 func TestAddAuthor(t *testing.T) {
 	want, err := util.ToJSON(testAuthor1)
 	checkErr(t, err)
@@ -132,6 +154,29 @@ func TestAddAuthor(t *testing.T) {
 	assertEqual(t, got.Name, testAuthor1.Name)
 	assertEqual(t, w.Code, http.StatusCreated)
 	assertEqual(t, w.HeaderMap.Get("Content-Type"), "application/json")
+}
+
+func TestAddAuthorFailValidation(t *testing.T) {
+	failAuthor := &teal.Author{Name: ""}
+	want, err := util.ToJSON(failAuthor)
+	checkErr(t, err)
+
+	testServer.Authors = &mock.AuthorStore{
+		CreateAuthorFn: func(a *teal.Author) (*teal.Author, error) {
+			return testAuthor1, nil
+		},
+	}
+
+	tc := &testCase{
+		method: http.MethodPost,
+		url:    "/api/authors/",
+		data:   want,
+		params: nil,
+		fn:     testServer.AddAuthor,
+	}
+	w, err := testResponse(t, tc)
+	checkErr(t, err)
+	assertValidationError(t, w, "name", "value is missing")
 }
 
 func TestUpdateAuthor(t *testing.T) {

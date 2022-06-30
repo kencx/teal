@@ -170,7 +170,7 @@ func TestQueryBooksFromAuthor(t *testing.T) {
 		method: http.MethodGet,
 		url:    "/api/books/?author=John+Doe",
 		data:   nil,
-		params: nil,
+		params: map[string]string{"author": "John Doe"},
 		fn:     testServer.GetAllBooks,
 	}
 
@@ -197,7 +197,7 @@ func TestNilQueryBooksFromAuthor(t *testing.T) {
 		method: http.MethodGet,
 		url:    "/api/books/?author=John+Doe",
 		data:   nil,
-		params: nil,
+		params: map[string]string{"author": "John Doe"},
 		fn:     testServer.GetAllBooks,
 	}
 
