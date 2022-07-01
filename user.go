@@ -29,7 +29,7 @@ type InputUser struct {
 }
 
 func (u User) String() string {
-	return fmt.Sprintf(`User %s, username=%s, role=%s`, u.Name, u.Username, u.Role)
+	return fmt.Sprintf(`[name=%s, username=%s, role=%s]`, u.Name, u.Username, u.Role)
 }
 
 func (u *User) SetPassword(text string) error {

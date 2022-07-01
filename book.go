@@ -3,6 +3,7 @@ package teal
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"regexp"
 
 	"github.com/kencx/teal/validator"
@@ -16,10 +17,15 @@ type Book struct {
 	ISBN          string       `json:"isbn" db:"isbn"`
 	NumOfPages    int          `json:"num_of_pages" db:"numOfPages"`
 	Rating        int          `json:"rating" db:"rating"`
-	State         string       `json:"state" db:"state"` // default empty
+	State         string       `json:"state" db:"state"`
 	DateAdded     sql.NullTime `json:"-" db:"dateAdded"`
 	DateUpdated   sql.NullTime `json:"-" db:"dateUpdated"`
 	DateCompleted sql.NullTime `json:"-" db:"dateCompleted"`
+}
+
+func (b Book) String() string {
+	return fmt.Sprintf(`[title=%s description=%s author=%v isbn=%s npages=%d rating=%d state=%s]`,
+		b.Title, b.Description.String, b.Author, b.ISBN, b.NumOfPages, b.Rating, b.State)
 }
 
 type NullString struct {
@@ -48,12 +54,7 @@ func (n NullString) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// func (b Book) String() string {
-// 	return fmt.Sprintf(`id=%d title=%s desc=%s author=%v isbn=%s dateAdded=%s dateUpdated=%s dateCompleted=%s`,
-// 		b.ID, b.Title, b.Description, b.Author, b.ISBN, b.DateAdded, b.DateUpdated, b.DateCompleted)
-// }
-
-var IsbnRgx = regexp.MustCompile(`[0-9]+`)
+var isbnRgx = regexp.MustCompile(`[0-9]+`)
 
 func (b *Book) Validate(v *validator.Validator) {
 	v.Check(b.Title != "", "title", "value is missing")
@@ -61,7 +62,7 @@ func (b *Book) Validate(v *validator.Validator) {
 	v.Check(len(b.Author) != 0, "author", "value is missing")
 
 	v.Check(b.ISBN != "", "isbn", "value is missing")
-	v.Check(validator.Matches(b.ISBN, IsbnRgx), "isbn", "incorrect format")
+	v.Check(validator.Matches(b.ISBN, isbnRgx), "isbn", "incorrect format")
 
 	v.Check(b.NumOfPages >= 0, "numOfPages", "must be >= 0")
 

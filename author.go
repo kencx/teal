@@ -12,7 +12,7 @@ type Author struct {
 }
 
 func (a Author) String() string {
-	return fmt.Sprintf(`Author %s`, a.Name)
+	return fmt.Sprintf(`[name=%s]`, a.Name)
 }
 
 func (a *Author) Validate(v *validator.Validator) {

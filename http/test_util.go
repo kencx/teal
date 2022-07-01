@@ -69,7 +69,9 @@ func middlewareTestResponse(t *testing.T, tc *testCase, fn func(next http.Handle
 func basicAuthTestResponse(t *testing.T, tc *testCase, auth string) (*httptest.ResponseRecorder, error) {
 	tc.headers = map[string]string{"Authorization": "Basic " + auth}
 	rw, err := middlewareTestResponse(t, tc, testServer.basicAuth)
-	checkErr(t, err)
+	if err != nil {
+		return nil, err
+	}
 	return rw, nil
 }
 

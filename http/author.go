@@ -27,22 +27,24 @@ func (s *Server) GetAuthor(rw http.ResponseWriter, r *http.Request) {
 
 	a, err := s.Authors.Get(id)
 	if err == teal.ErrDoesNotExist {
-		s.InfoLog.Printf("Author %d not found", id)
+		s.InfoLog.Printf("Author %d does not exist", id)
 		response.NotFound(rw, r, err)
 		return
 
 	} else if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	res, err := util.ToJSON(response.Envelope{"authors": a})
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	s.InfoLog.Printf("Author %d returned", id)
+	s.InfoLog.Printf("Author %d retrieved: %v", id, a)
 	response.OK(rw, r, res)
 }
 
@@ -51,22 +53,24 @@ func (s *Server) GetAuthorByName(rw http.ResponseWriter, r *http.Request) {
 
 	a, err := s.Authors.GetByName(name)
 	if err == teal.ErrDoesNotExist {
-		s.InfoLog.Printf("Author %q not found", name)
+		s.InfoLog.Printf("Author %q does not exist", name)
 		response.NotFound(rw, r, err)
 		return
 
 	} else if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	res, err := util.ToJSON(response.Envelope{"authors": a})
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	s.InfoLog.Printf("Author %q returned", name)
+	s.InfoLog.Printf("Author %q retrieved: %v", name, a)
 	response.OK(rw, r, res)
 }
 
@@ -74,22 +78,24 @@ func (s *Server) GetAllAuthors(rw http.ResponseWriter, r *http.Request) {
 
 	a, err := s.Authors.GetAll()
 	if err == teal.ErrNoRows {
-		s.InfoLog.Println("No authors found")
+		s.InfoLog.Println("No authors retrieved")
 		response.NoContent(rw, r)
 		return
 
 	} else if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	res, err := util.ToJSON(response.Envelope{"authors": a})
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	s.InfoLog.Printf("%d authors returned", len(a))
+	s.InfoLog.Printf("%d authors retrieved: %v", len(a), a)
 	response.OK(rw, r, res)
 }
 
@@ -99,6 +105,7 @@ func (s *Server) AddAuthor(rw http.ResponseWriter, r *http.Request) {
 	var author teal.Author
 	err := request.Read(rw, r, &author)
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
@@ -113,18 +120,18 @@ func (s *Server) AddAuthor(rw http.ResponseWriter, r *http.Request) {
 
 	result, err := s.Authors.Create(&author)
 	if err != nil {
-		s.ErrLog.Print(err)
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	body, err := util.ToJSON(response.Envelope{"authors": result})
 	if err != nil {
-		s.ErrLog.Println(err)
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
-	s.InfoLog.Printf("Author %v created", result)
+	s.InfoLog.Printf("New author created: %v", result)
 	response.Created(rw, r, body)
 }
 
@@ -138,6 +145,7 @@ func (s *Server) UpdateAuthor(rw http.ResponseWriter, r *http.Request) {
 	var author teal.Author
 	err := request.Read(rw, r, &author)
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
@@ -153,22 +161,24 @@ func (s *Server) UpdateAuthor(rw http.ResponseWriter, r *http.Request) {
 
 	result, err := s.Authors.Update(id, &author)
 	if err == teal.ErrDoesNotExist {
+		s.InfoLog.Printf("Author %d does not exist", id)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	body, err := util.ToJSON(response.Envelope{"authors": result})
 	if err != nil {
-		s.ErrLog.Println(err)
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	s.InfoLog.Printf("Author %v updated", result)
+	s.InfoLog.Printf("Author %d updated: %v", id, result)
 	response.OK(rw, r, body)
 }
 
@@ -180,12 +190,13 @@ func (s *Server) DeleteAuthor(rw http.ResponseWriter, r *http.Request) {
 
 	err := s.Authors.Delete(id)
 	if err == teal.ErrDoesNotExist {
+		s.InfoLog.Printf("Author %d does not exist", id)
 		response.NotFound(rw, r, err)
 		return
 	}
 
 	if err != nil {
-		s.ErrLog.Println(err)
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}

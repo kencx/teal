@@ -25,24 +25,26 @@ func (s *Server) GetUser(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a, err := s.Users.Get(id)
+	u, err := s.Users.Get(id)
 	if err == teal.ErrDoesNotExist {
-		s.InfoLog.Printf("User %d not found", id)
+		s.InfoLog.Printf("User %d does not exist", id)
 		response.NotFound(rw, r, err)
 		return
 
 	} else if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	res, err := util.ToJSON(response.Envelope{"users": a})
+	res, err := util.ToJSON(response.Envelope{"users": u})
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	s.InfoLog.Printf("User %d returned", id)
+	s.InfoLog.Printf("User %d retrieved: %v", id, u)
 	response.OK(rw, r, res)
 }
 
@@ -51,22 +53,24 @@ func (s *Server) GetUserByUsername(rw http.ResponseWriter, r *http.Request) {
 
 	u, err := s.Users.GetByUsername(username)
 	if err == teal.ErrDoesNotExist {
-		s.InfoLog.Printf("User %q not found", username)
+		s.InfoLog.Printf("User %q does not exist", username)
 		response.NotFound(rw, r, err)
 		return
 
 	} else if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	res, err := util.ToJSON(response.Envelope{"users": u})
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	s.InfoLog.Printf("User %q returned", username)
+	s.InfoLog.Printf("User %q retrieved: %v", username, u)
 	response.OK(rw, r, res)
 }
 
@@ -75,6 +79,7 @@ func (s *Server) Register(rw http.ResponseWriter, r *http.Request) {
 	var input teal.InputUser
 	err := request.Read(rw, r, &input)
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.BadRequest(rw, r, err)
 		return
 	}
@@ -94,6 +99,7 @@ func (s *Server) Register(rw http.ResponseWriter, r *http.Request) {
 
 	err = user.SetPassword(input.Password)
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
@@ -106,6 +112,7 @@ func (s *Server) Register(rw http.ResponseWriter, r *http.Request) {
 			response.ValidationError(rw, r, v.Errors)
 			return
 		default:
+			s.ErrLog.Printf("err: %v", err)
 			response.InternalServerError(rw, r, err)
 			return
 		}
@@ -113,12 +120,12 @@ func (s *Server) Register(rw http.ResponseWriter, r *http.Request) {
 
 	body, err := util.ToJSON(response.Envelope{"users": result})
 	if err != nil {
-		s.ErrLog.Println(err)
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	s.InfoLog.Printf("User %v created", result)
+	s.InfoLog.Printf("New user registered: %v", result)
 	response.Created(rw, r, body)
 }
 
@@ -131,6 +138,7 @@ func (s *Server) UpdateUser(rw http.ResponseWriter, r *http.Request) {
 	var input teal.InputUser
 	err := request.Read(rw, r, &input)
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
@@ -153,22 +161,24 @@ func (s *Server) UpdateUser(rw http.ResponseWriter, r *http.Request) {
 
 	result, err := s.Users.Update(id, &user)
 	if err == teal.ErrDoesNotExist {
-		response.InternalServerError(rw, r, err)
+		s.InfoLog.Printf("User %d does not exist", id)
+		response.NoContent(rw, r)
 		return
 	}
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	body, err := util.ToJSON(response.Envelope{"users": result})
 	if err != nil {
-		s.ErrLog.Println(err)
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	s.InfoLog.Printf("User %v updated", result)
+	s.InfoLog.Printf("User %d updated: %v", id, result)
 	response.OK(rw, r, body)
 
 }
@@ -181,17 +191,17 @@ func (s *Server) DeleteUser(rw http.ResponseWriter, r *http.Request) {
 
 	err := s.Users.Delete(id)
 	if err == teal.ErrDoesNotExist {
+		s.InfoLog.Printf("User %d does not exist", id)
 		response.NotFound(rw, r, err)
 		return
 	}
 
 	if err != nil {
-		s.ErrLog.Println(err)
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	s.InfoLog.Printf("User %d deleted", id)
 	response.OK(rw, r, nil)
-
 }

@@ -35,22 +35,24 @@ func (s *Server) GetBook(rw http.ResponseWriter, r *http.Request) {
 
 	b, err := s.Books.Get(id)
 	if err == teal.ErrDoesNotExist {
-		s.InfoLog.Printf("Book %d not found", id)
+		s.InfoLog.Printf("Book %d does not exist", id)
 		response.NotFound(rw, r, err)
 		return
 
 	} else if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	res, err := util.ToJSON(response.Envelope{"books": b})
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	s.InfoLog.Printf("Book %d returned", id)
+	s.InfoLog.Printf("Book %d retrieved: %v", id, b)
 	response.OK(rw, r, res)
 }
 
@@ -59,22 +61,24 @@ func (s *Server) GetBookByISBN(rw http.ResponseWriter, r *http.Request) {
 
 	b, err := s.Books.GetByISBN(isbn)
 	if err == teal.ErrDoesNotExist {
-		s.InfoLog.Printf("Book %q not found", isbn)
+		s.InfoLog.Printf("Book isbn=%q does not exist", isbn)
 		response.NotFound(rw, r, err)
 		return
 
 	} else if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	res, err := util.ToJSON(response.Envelope{"books": b})
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	s.InfoLog.Printf("Book %q returned", isbn)
+	s.InfoLog.Printf("Book isbn=%q retrieved: %v", isbn, b)
 	response.OK(rw, r, res)
 }
 
@@ -90,22 +94,24 @@ func (s *Server) GetAllBooks(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if err == teal.ErrNoRows {
-		s.InfoLog.Println("No books found")
+		s.InfoLog.Println("No books retrieved")
 		response.NoContent(rw, r)
 		return
 
 	} else if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	res, err := util.ToJSON(response.Envelope{"books": b})
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	s.InfoLog.Printf("%d books returned", len(b))
+	s.InfoLog.Printf("%d books retrieved: %v", len(b), b)
 	response.OK(rw, r, res)
 }
 
@@ -115,6 +121,7 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 	var book teal.Book
 	err := request.Read(rw, r, &book)
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.BadRequest(rw, r, err)
 		return
 	}
@@ -128,7 +135,7 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 
 	result, err := s.Books.Create(&book)
 	if err != nil {
-		s.ErrLog.Print(err)
+		s.ErrLog.Printf("err: %v", err)
 		response.BadRequest(rw, r, err)
 		return
 	}
@@ -139,7 +146,7 @@ func (s *Server) AddBook(rw http.ResponseWriter, r *http.Request) {
 		response.InternalServerError(rw, r, err)
 		return
 	}
-	s.InfoLog.Printf("Book %v created", result)
+	s.InfoLog.Printf("New book created: %v", result)
 	response.Created(rw, r, body)
 }
 
@@ -153,6 +160,7 @@ func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
 	var book teal.Book
 	err := request.Read(rw, r, &book)
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.BadRequest(rw, r, err)
 		return
 	}
@@ -168,22 +176,24 @@ func (s *Server) UpdateBook(rw http.ResponseWriter, r *http.Request) {
 
 	result, err := s.Books.Update(id, &book)
 	if err == teal.ErrDoesNotExist {
+		s.InfoLog.Printf("Book %d does not exist", id)
 		response.NotFound(rw, r, err)
 		return
 	}
 	if err != nil {
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
 	body, err := util.ToJSON(response.Envelope{"books": result})
 	if err != nil {
-		s.ErrLog.Println(err)
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
 
-	s.InfoLog.Printf("Book %v updated", result)
+	s.InfoLog.Printf("Book %d updated: %v", id, result)
 	response.OK(rw, r, body)
 }
 
@@ -195,12 +205,13 @@ func (s *Server) DeleteBook(rw http.ResponseWriter, r *http.Request) {
 
 	err := s.Books.Delete(id)
 	if err == teal.ErrDoesNotExist {
+		s.InfoLog.Printf("Book %d does not exist", id)
 		response.NotFound(rw, r, err)
 		return
 	}
 
 	if err != nil {
-		s.ErrLog.Println(err)
+		s.ErrLog.Printf("err: %v", err)
 		response.InternalServerError(rw, r, err)
 		return
 	}
